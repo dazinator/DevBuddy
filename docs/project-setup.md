@@ -99,7 +99,7 @@ The server exposes endpoints at the root path `/` that accept JSON-RPC 2.0 reque
   "id": 2,
   "method": "tools/call",
   "params": {
-    "name": "CheckFileExists",
+    "name": "check_file_exists",
     "arguments": {
       "fileName": "path/to/file.cs"
     }
