@@ -1,130 +1,409 @@
-# headless-ide-mcp Design Document
 
-## Overview
-headless-ide-mcp is a custom Model Context Protocol (MCP) server that provides high-level, .NET-specific code intelligence, solution understanding, DI graph analysis, project navigation, and workflow-support tooling for AI agents. It is designed to operate alongside:
+---
 
-1. A Language Server Protocol (LSP) server such as OmniSharp.
-2. An MCPâ€“LSP bridge such as lsp-mcp.
-3. A Git-synced workspace containing the current repo.
+headless-ide-mcp
 
-The MCP server is intentionally decoupled from any workflow engine or orchestration system so that it can be reused by other tools, agents, or automation platforms.
+Design Document (Revised for CLI-first Architecture)
 
-## Architectural Principles
+1. Overview
 
-### Small, Composable Tools
-Expose minimal, predictable MCP tools. The LLM orchestrates multi-step interactions.
+headless-ide-mcp is a custom Model Context Protocol (MCP) server that provides a headless, containerised development environment for AI agents. It exposes a controlled runtime where the agent can execute arbitrary CLI commands, explore the codebase, query project structure, interact with LSP tools, and call higher level domain specific tools implemented in .NET.
 
-### High-Level Semantics
-Low-level code navigation is handled by LSP through lsp-mcp. headless-ide-mcp focuses on higher-level project intelligence such as:
+This approach mirrors the operational model used by GitHub Copilot Agents on GitHub Actions runners. The agent has access to a predefined set of CLI tools on the container's PATH, along with a standardised MCP tool for executing commands. The agent discovers the available capabilities and composes them at runtime.
 
-- Solution graph analysis.
-- Project dependency mapping.
-- DI container graph extraction.
-- Work item-to-code mapping utilities.
-- Task breakdown support.
-- Coding policy analysis.
+The server is built using ASP.NET Core, with tool logic residing in the HeadlessIdeMcp.Core project. It is designed to be modular, safe, and easily extensible.
 
-### Stateless, Pure Server
-Tools operate on the repo given via volume mount or via input parameters.
 
-## High-Level Architecture
+---
 
-- git-sync: maintains a local copy of the repository.
-- lsp-server: OmniSharp LSP for semantic code navigation.
-- lsp-mcp: MCP interface to LSP functions.
-- headless-ide-mcp: custom MCP server providing project-aware tools.
+2. Architectural Principles
 
-## MCP Tools Provided by headless-ide-mcp
+2.1 CLI-first capabilities
 
-### Project Graph Tools
-- dotnet.listProjects
-- dotnet.getProjectInfo
-- dotnet.fileToProject
-- dotnet.getDependencies
+Expose a general purpose command execution tool:
 
-### DI Graph Tools
-- dotnet.scanDiGraph
-- dotnet.findImplementations(interfaceName)
+shell.execute
 
-### Work Item Context Tools
-- ado.getWorkItemContext(id)
-- ado.linkedCommits(id)
+shell.executeJson (optional extension)
 
-### Code Impact Heuristics
-- dotnet.suggestRelevantFiles(workItemText)
-- dotnet.proposeTaskBreakdown(files, context)
 
-### Policy Tools
-- policy.validateCodingRules(path)
-- policy.evaluateRefactorImpact(files)
+This gives the agent the power to use:
 
-## MCP Tools Provided by lsp-mcp
-- lsp.search
-- lsp.readFile
-- lsp.findSymbol
-- lsp.findReferences
-- lsp.listSymbolsInFile
-- lsp.getDocumentDiagnostics
+dotnet CLI (list projects, build, test)
 
-## Repository Sync Strategy
+ripgrep (source search)
 
-Use git-sync to maintain a local repo at /repo. Mount this directory into lsp-server, lsp-mcp, and optionally headless-ide-mcp.
+tree, find, sed, jq
 
-Alternatively, tools can be designed to accept file content and project structure directly via tool call input.
+your own custom analysis tools
 
-## Docker Compose Template
+language servers indirectly
 
-version: "3.9"
+any other utilities included in the container
+
+
+This dramatically reduces the number of MCP specific tools needed and matches the model used by Copilot Agents.
+
+2.2 High level domain tools alongside CLI
+
+Provide a small set of structured tools for things that benefit from returning clean JSON:
+
+project graph
+
+DI graph
+
+architectural constraints
+
+task breakdown helpers
+
+work item context parsing
+
+
+The CLI handles the low level mechanics. The structured tools encode higher level semantics.
+
+2.3 LSP integration for semantic navigation
+
+A separate container running OmniSharp plus lsp-mcp can be included. This provides:
+
+find symbol
+
+find references
+
+diagnostics
+
+symbol maps
+
+
+The agent will naturally combine LSP tools with shell tools.
+
+2.4 Stateless server
+
+The server is not tied to any workflow engine. It acts only as a capability provider.
+
+
+---
+
+3. Repository Structure
+
+Your existing repo structure is appropriate and supports this architecture:
+
+headless-ide-mcp/
+├── src/
+│   ├── HeadlessIdeMcp.Server/           # ASP.NET Core MCP server with CLI tools
+│   ├── HeadlessIdeMcp.Core/             # Higher level analysis libraries
+│   ├── HeadlessIdeMcp.IntegrationTests/ # End to end tests
+│   └── Solution.sln
+├── sample-codebase/
+│   ├── SampleProject1/
+│   ├── SampleProject2/
+│   └── SampleCodeBase.sln
+├── docs/
+├── docker-compose.yml
+├── docker-compose.dcproj
+└── Dockerfile
+
+This layout supports:
+
+server code
+
+shared logic in .Core
+
+sample solution for development and integration testing
+
+documentation
+
+container build and orchestration
+
+
+
+---
+
+4. Core MCP Tools
+
+4.1 shell.execute
+
+Executes a CLI command in a sandbox.
+
+Input
+
+{
+  "command": "string",
+  "cwd": "optional string",
+  "timeoutSeconds": 30
+}
+
+Output
+
+{
+  "stdout": "...",
+  "stderr": "...",
+  "exitCode": 0
+}
+
+4.2 shell.executeJson
+
+Useful when calling tools that return JSON.
+
+Output
+
+{
+  "json": { ... },
+  "stderr": "...",
+  "exitCode": 0
+}
+
+4.3 dotnet.projectGraph
+
+Uses Roslyn or MSBuild APIs to return:
+
+list of projects
+
+references
+
+source file enumeration
+
+output paths
+
+target frameworks
+
+
+4.4 dotnet.diGraph
+
+Parses DI container usage to produce:
+
+service registration list
+
+service types
+
+lifetimes
+
+implementation mapping
+
+
+4.5 dotnet.suggestRelevantFiles
+
+Combines heuristics with optional shell calls (ripgrep) to propose:
+
+code files possibly relevant to a natural language query
+
+
+4.6 dotnet.proposeTaskBreakdown
+
+Generates a structured skeleton of tasks for a change request.
+
+4.7 policy.validateCodingRules
+
+Runs a set of rules that can include:
+
+custom analyzers
+
+conventions
+
+layered architecture checks
+
+
+These high level structured tools are optional. The CLI tool can always be used instead, but these tools provide better data for the model.
+
+
+---
+
+5. Container Environment
+
+The container should include:
+
+CLI tools:
+
+dotnet SDK and runtime
+
+ripgrep (rg)
+
+jq
+
+tree
+
+bash
+
+findutils
+
+coreutils
+
+optionally git
+
+optionally curl and wget
+
+any custom .NET global tools you create
+
+
+Workspace
+
+Git synced repo mounted at /repo
+
+
+User privileges
+
+Non root user
+
+No dangerous capabilities
+
+Ideally no outbound network access
+
+
+Shell environment
+
+PATH should include:
+
+/usr/bin
+
+/usr/local/bin
+
+/repo/tools (for your custom utilities)
+
+
+This gives the agent a powerful yet controlled environment.
+
+
+---
+
+6. Docker Compose Design
+
+Suggested services:
+
 services:
   git-sync:
-    image: k8s.gcr.io/git-sync/git-sync:v4
-    volumes:
-      - repo:/repo
-    environment:
-      - GIT_SYNC_REPO=https://github.com/your/repo.git
-      - GIT_SYNC_BRANCH=develop
-      - GIT_SYNC_ONE_TIME=false
-      - GIT_SYNC_ROOT=/repo
+    ... keeps /repo up to date ...
 
   lsp-server:
-    image: your/omnisharp-lsp
+    image: omnisharp
     volumes:
       - repo:/repo
 
   lsp-mcp:
-    image: your/lsp-mcp
+    image: your-lsp-mcp
     volumes:
       - repo:/repo
 
   headless-ide-mcp:
-    image: your/headless-ide-mcp
+    build: .
     volumes:
       - repo:/repo
 
-volumes:
-  repo:
+The MCP server does not need to communicate directly with LSP. Claude coordinates tool usage.
 
-## Development Roadmap
 
-### Phase 1 â€” Core Setup
-- MCP server scaffolding.
-- Project graph extraction.
-- DI graph scanning.
+---
 
-### Phase 2 â€” LSP Integration
-- Ensure lsp-mcp is functioning.
-- Add higher-level heuristic tools.
+7. Workflow for Agent Usage
 
-### Phase 3 â€” Enhanced Semantics
-- Context-aware file suggestion.
-- Policy tools.
-- Task breakdown utilities.
+Example process when Claude needs to understand a work item:
 
-### Phase 4 â€” Refinement and Expansion
-- Additional language support.
-- Custom refactoring helpers.
-- Further tooling for architectural analysis.
+1. shell.execute: "dotnet sln list"
 
-## Summary
 
-headless-ide-mcp is a modular, reusable MCP server that extends existing LSP capabilities with .NET-specific structural and semantic tools. It focuses exclusively on providing an interface suitable for LLM-based agents, without prescribing any particular workflow engine.
+2. shell.execute: "rg FooService -g '*.cs'"
+
+
+3. lsp.findReferences: "IOrderService"
+
+
+4. shell.execute: "dotnet build"
+
+
+5. dotnet.projectGraph
+
+
+6. dotnet.diGraph
+
+
+7. dotnet.proposeTaskBreakdown
+
+
+
+This demonstrates how the agent chains multiple tools without your MCP layer needing explicit orchestration logic.
+
+
+---
+
+8. Security Considerations
+
+CLI execution increases power, but also requires good sandbox discipline:
+
+run inside a rootless Docker container
+
+restrict filesystem access to /repo and /tmp
+
+disable network access where possible
+
+avoid mounting host sensitive paths
+
+place global tools in controlled locations
+
+enforce timeouts
+
+
+This matches the GitHub runner model.
+
+
+---
+
+9. Development Roadmap
+
+Phase 1
+
+Implement shell.execute
+
+Implement server skeleton
+
+Add container with CLI tools
+
+Add integration tests for shell execution
+
+
+Phase 2
+
+Add project graph and DI graph structured tools
+
+Add msbuild or Roslyn workspace loader
+
+Add sample codebase tests
+
+
+Phase 3
+
+Add task breakdown and heuristic tools
+
+Add policy validation tools
+
+Expand container toolset as needed
+
+
+Phase 4
+
+LSP server integration via lsp-mcp
+
+Optional interactive session tools
+
+Additional custom analyzers or formatters
+
+
+
+---
+
+10. Summary
+
+This revised design provides a flexible, powerful foundation:
+
+shell-first architecture for maximum capability
+
+high level .NET tools for structured reasoning
+
+compatibility with LSP via lsp-mcp
+
+safe sandboxed container environment
+
+modular design aligned with your existing repo structure
+
+
+The agent receives an environment similar to GitHub Actions and Copilot Agents, without the complexity of large amounts of custom MCP tool code.
+
+
+---
