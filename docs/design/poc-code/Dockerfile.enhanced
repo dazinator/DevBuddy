@@ -1,0 +1,97 @@
+# POC 5: Enhanced Container with CLI Tools
+# This Dockerfile demonstrates the container optimization and CLI tool integration
+
+# Build stage - includes SDK for development and tool usage
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Copy solution and project files
+COPY ["src/HeadlessIdeMcp.Server/HeadlessIdeMcp.Server.csproj", "HeadlessIdeMcp.Server/"]
+COPY ["src/HeadlessIdeMcp.Core/HeadlessIdeMcp.Core.csproj", "HeadlessIdeMcp.Core/"]
+COPY ["src/Directory.Build.props", "./"]
+COPY ["src/Directory.Packages.props", "./"]
+COPY ["src/.editorconfig", "./"]
+COPY ["src/global.json", "./"]
+
+# Restore dependencies
+RUN dotnet restore "HeadlessIdeMcp.Server/HeadlessIdeMcp.Server.csproj"
+
+# Copy source code
+COPY src/HeadlessIdeMcp.Server/ HeadlessIdeMcp.Server/
+COPY src/HeadlessIdeMcp.Core/ HeadlessIdeMcp.Core/
+
+# Build the application
+RUN dotnet build "HeadlessIdeMcp.Server/HeadlessIdeMcp.Server.csproj" -c Release -o /app/build
+
+# Publish stage
+FROM build AS publish
+RUN dotnet publish "HeadlessIdeMcp.Server/HeadlessIdeMcp.Server.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+# Runtime stage - enhanced with CLI tools
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS final
+WORKDIR /app
+
+# Install CLI tools for development environment
+# Using SDK base image instead of aspnet to support dotnet CLI commands
+RUN apt-get update && apt-get install -y \
+    # Core utilities (mostly already present but explicit for clarity)
+    bash \
+    coreutils \
+    findutils \
+    # Search and text processing
+    ripgrep \
+    jq \
+    tree \
+    # Version control
+    git \
+    # Network tools (optional)
+    curl \
+    wget \
+    # Additional utilities
+    vim \
+    less \
+    && rm -rf /var/lib/apt/lists/*
+
+# Verify tool installations
+RUN echo "=== Verifying CLI Tool Installations ===" && \
+    echo "dotnet: $(dotnet --version)" && \
+    echo "ripgrep: $(rg --version | head -1)" && \
+    echo "jq: $(jq --version)" && \
+    echo "tree: $(tree --version | head -1)" && \
+    echo "git: $(git --version)" && \
+    echo "bash: $(bash --version | head -1)"
+
+# Create non-root user for security
+RUN useradd -m -u 1001 -s /bin/bash mcpuser && \
+    mkdir -p /workspace /tmp/mcp && \
+    chown -R mcpuser:mcpuser /workspace /tmp/mcp /app
+
+# Create custom tools directory (for future .NET global tools or scripts)
+RUN mkdir -p /workspace/tools && chown mcpuser:mcpuser /workspace/tools
+ENV PATH="${PATH}:/workspace/tools"
+
+# Set environment variable for code base path
+ENV CODE_BASE_PATH=/workspace
+
+# Expose ports
+EXPOSE 8080
+EXPOSE 8081
+
+# Switch to non-root user
+USER mcpuser
+
+# Copy published application
+COPY --from=publish --chown=mcpuser:mcpuser /app/publish .
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+ENTRYPOINT ["dotnet", "HeadlessIdeMcp.Server.dll"]
+
+# Build notes:
+# - Base image size: ~450MB (dotnet/sdk:8.0)
+# - Additional tools: ~40MB
+# - Total expected size: ~490-500MB
+# - Build time (first): ~3-5 minutes
+# - Build time (cached): ~20-30 seconds
