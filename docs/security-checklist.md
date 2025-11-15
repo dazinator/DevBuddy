@@ -53,10 +53,11 @@ This checklist provides a comprehensive guide for security validation before pro
   - Only essential capabilities added back
   - Minimal capability set: CHOWN, SETUID, SETGID, DAC_OVERRIDE
 
-- [x] **Read-Only Workspace**
-  - Workspace mounted as read-only (`:ro`)
-  - Write operations only in /tmp
-  - Volume mount verified in docker-compose.yml
+- [ ] **Read-Only Workspace (Production Only)**
+  - Development: Read-write mount for agent to create/modify files
+  - Production: Workspace mounted as read-only (`:ro`)
+  - Write operations in /tmp always allowed
+  - Volume mount configuration verified in docker-compose.yml
 
 - [x] **Resource Limits**
   - CPU limit: 2 cores maximum

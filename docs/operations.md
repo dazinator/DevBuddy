@@ -39,13 +39,23 @@ docker-compose down
 
 ### Volume Mounts
 
+**Development (Read-Write):**
 ```yaml
 volumes:
-  # Mount codebase as read-only
+  # Read-write mount allows agent to create/modify files for testing
+  - ./your-codebase:/workspace
+```
+
+**Production (Read-Only):**
+```yaml
+volumes:
+  # Read-only mount for security - prevents unauthorized modifications
   - ./your-codebase:/workspace:ro
 ```
 
-**Important**: Always mount workspace as read-only (`:ro`) in production.
+**Important**: 
+- Use **read-write** (default) for development/testing environments where the agent needs to create files, write tests, or modify code
+- Use **read-only** (`:ro` flag) for production environments to prevent unauthorized modifications
 
 ## Configuration
 

@@ -149,14 +149,24 @@ The container runs as the `vscode` user (non-root) to limit damage from potentia
 USER vscode
 ```
 
-### Read-Only Workspace
+### Read-Only Workspace (Production)
 
-The workspace is mounted read-only to prevent unauthorized modifications:
+For production environments, the workspace should be mounted read-only to prevent unauthorized modifications:
 
+**Production:**
 ```yaml
 volumes:
   - ./sample-codebase:/workspace:ro
 ```
+
+**Development:**
+```yaml
+volumes:
+  # Read-write for testing - allows agent to create/modify files
+  - ./sample-codebase:/workspace
+```
+
+**Note**: The default docker-compose.yml uses read-write mode for development. Add `:ro` flag for production deployments.
 
 ### Network Isolation
 

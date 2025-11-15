@@ -106,13 +106,13 @@ await Should.ThrowAsync<UnauthorizedAccessException>(async () =>
 - Capability dropping (`cap_drop: ALL`)
 - No new privileges (`no-new-privileges:true`)
 - Limited capabilities (`CHOWN`, `SETUID`, `SETGID`, `DAC_OVERRIDE`)
-- Read-only workspace mount
+- Read-write workspace mount (development) / Read-only workspace mount (production)
 
 **Results:**
 - ✅ Container runs as non-root user
 - ✅ All Linux capabilities dropped except essential ones
 - ✅ Privilege escalation prevented
-- ✅ Workspace mounted read-only
+- ✅ Workspace mount configurable (read-write for development, read-only for production)
 
 **Findings:**
 - Container isolation properly configured
@@ -131,7 +131,10 @@ cap_add:
   - SETGID
   - DAC_OVERRIDE
 volumes:
-  - ./sample-codebase:/workspace:ro
+  # Development: read-write for agent to create/modify files
+  - ./sample-codebase:/workspace
+  # Production: add :ro for read-only security
+  # - ./sample-codebase:/workspace:ro
 ```
 
 ### 4. Resource Exhaustion (DoS) ✅ PASS
@@ -360,7 +363,7 @@ No informational findings.
 6. ✅ Comprehensive audit logging
 7. ✅ Timeout enforcement
 8. ✅ Non-root container user
-9. ✅ Read-only workspace mount
+9. ✅ Workspace mount configurable (read-write for development, read-only for production)
 10. ✅ Sensitive data redaction in logs
 
 ### Additional Recommendations for Production
