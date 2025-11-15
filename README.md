@@ -25,7 +25,7 @@ The server will be available at `http://localhost:5000`
 
 ### Test the Server
 
-Use the provided `test-mcp-server.http` file with your HTTP client:
+Use the provided `.http/test-mcp-server.http` file with your HTTP client:
 
 ```http
 ### Health Check
