@@ -78,7 +78,7 @@ Add the `CommandExecutionService` class to `HeadlessIdeMcp.Core` to enable secur
 - `src/HeadlessIdeMcp.Core/ProcessExecution/CommandExecutionOptions.cs` (NEW)
 
 **Implementation Guide:**
-- Use POC code from `docs/design/poc-code/CommandExecutionService.cs`
+- Use POC code from `docs/design/poc/poc-code/CommandExecutionService.cs`
 - Ensure async/await throughout
 - Add XML documentation comments
 - Follow existing code style in repository
@@ -123,7 +123,7 @@ Add MCP tool implementations that expose the CommandExecutionService to AI agent
 - `src/HeadlessIdeMcp.IntegrationTests/ShellToolsTests.cs` (NEW)
 
 **Implementation Guide:**
-- Use POC code from `docs/design/poc-code/ShellTools.cs`
+- Use POC code from `docs/design/poc/poc-code/ShellTools.cs`
 - Follow pattern from existing `FileSystemTools.cs`
 - Use descriptive `[Description]` attributes for AI agents
 - Handle all exceptions gracefully
@@ -183,7 +183,7 @@ Update the Dockerfile to use the Microsoft DevContainer base image (mcr.microsof
 - ➕ ripgrep (install via apt-get)
 
 **Implementation Guide:**
-- Use `docs/design/poc-code/Dockerfile.enhanced` as reference
+- Use `docs/design/poc/poc-code/Dockerfile.enhanced` as reference
 - Multi-stage build: DevContainer base → build → final with DevContainer
 - Only install ripgrep via apt-get
 - Verify all tools during build

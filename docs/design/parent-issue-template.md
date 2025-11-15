@@ -22,10 +22,10 @@ The current MCP server has basic file system tools but lacks the ability to exec
 ## Design Documents
 
 - [Design Discussion](../docs/Design-Discussion.md) - Original design proposal
-- [Viability Assessment](../docs/design/viability-assessment.md) - Technical feasibility analysis
-- [Fail-Fast Opportunities](../docs/design/fail-fast-opportunities.md) - Risk validation strategy
-- [POC Code](../docs/design/poc-code/README.md) - Proof of concept implementations
-- [Refined Design](../docs/design/refined-design.md) - Final validated design
+- [Viability Assessment](../docs/design/poc/viability-assessment.md) - Technical feasibility analysis
+- [Fail-Fast Opportunities](../docs/design/poc/fail-fast-opportunities.md) - Risk validation strategy
+- [POC Code](../docs/design/poc/poc-code/README.md) - Proof of concept implementations
+- [Refined Design](../docs/design/poc/refined-design.md) - Final validated design
 - [Implementation Plan](../docs/design/implementation-plan.md) - Detailed breakdown
 
 ## Objectives

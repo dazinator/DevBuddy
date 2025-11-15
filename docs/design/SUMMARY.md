@@ -17,7 +17,7 @@ This design phase successfully completed a comprehensive viability assessment, r
 ## Deliverables
 
 ### 1. Viability Assessment ✅
-**File:** `docs/design/viability-assessment.md`
+**File:** `docs/design/poc/viability-assessment.md`
 
 **Key Findings:**
 - ✅ CLI-first architecture is highly viable
@@ -31,7 +31,7 @@ This design phase successfully completed a comprehensive viability assessment, r
 ---
 
 ### 2. Fail-Fast Opportunities Analysis ✅
-**File:** `docs/design/fail-fast-opportunities.md`
+**File:** `docs/design/poc/fail-fast-opportunities.md`
 
 **Critical Assumptions Validated:**
 1. ✅ Process execution in .NET containers works reliably
@@ -46,7 +46,7 @@ This design phase successfully completed a comprehensive viability assessment, r
 ---
 
 ### 3. Proof-of-Concept Implementations ✅
-**Directory:** `docs/design/poc-code/`
+**Directory:** `docs/design/poc/poc-code/`
 
 **POC 1: Process Execution** ✅
 - `CommandExecutionService.cs` - Full implementation
@@ -81,7 +81,7 @@ This design phase successfully completed a comprehensive viability assessment, r
 ---
 
 ### 4. Refined Design Document ✅
-**File:** `docs/design/refined-design.md`
+**File:** `docs/design/poc/refined-design.md`
 
 **Complete Specifications:**
 - ✅ System architecture diagram
@@ -136,17 +136,21 @@ This design phase successfully completed a comprehensive viability assessment, r
 docs/
 ├── Design-Discussion.md              # Original design (reference)
 └── design/                           # NEW: Complete design package
-    ├── viability-assessment.md       # ✅ Technical feasibility
-    ├── fail-fast-opportunities.md    # ✅ Risk validation strategy
-    ├── refined-design.md             # ✅ Final architecture spec
+    ├── README.md                     # ✅ Navigation guide
+    ├── SUMMARY.md                    # ✅ Executive summary
     ├── implementation-plan.md        # ✅ Detailed sub-issues
     ├── parent-issue-template.md      # ✅ GitHub issue template
-    └── poc-code/                     # ✅ Working prototypes
-        ├── CommandExecutionService.cs
-        ├── CommandExecutionServiceTests.cs
-        ├── ShellTools.cs
-        ├── Dockerfile.enhanced
-        └── README.md
+    └── poc/                          # ✅ POC validation documents
+        ├── viability-assessment.md   # ✅ Technical feasibility
+        ├── fail-fast-opportunities.md # ✅ Risk validation strategy
+        ├── refined-design.md         # ✅ Final architecture spec
+        ├── update-summary-v2.md      # ✅ v1.0 vs v2.0 comparison
+        └── poc-code/                 # ✅ Working prototypes
+            ├── CommandExecutionService.cs
+            ├── CommandExecutionServiceTests.cs
+            ├── ShellTools.cs
+            ├── Dockerfile.enhanced
+            └── README.md
 ```
 
 ---
@@ -300,24 +304,24 @@ The design phase has successfully delivered a comprehensive, validated design fo
 ## Appendix: Document Quick Reference
 
 ### For Developers
-- **Start Here:** `refined-design.md`
+- **Start Here:** `poc/refined-design.md`
 - **Implementation:** `implementation-plan.md`
-- **POC Code:** `poc-code/README.md`
+- **POC Code:** `poc/poc-code/README.md`
 
 ### For Security Team
-- **Security Model:** `refined-design.md` (Section 4)
-- **Risk Analysis:** `fail-fast-opportunities.md`
-- **Security POC:** `poc-code/README.md` (POC 2)
+- **Security Model:** `poc/refined-design.md` (Section 4)
+- **Risk Analysis:** `poc/fail-fast-opportunities.md`
+- **Security POC:** `poc/poc-code/README.md` (POC 2)
 
 ### For Product/Management
-- **Executive Summary:** `viability-assessment.md` (Section 1)
+- **Executive Summary:** `poc/viability-assessment.md` (Section 1)
 - **Timeline:** `implementation-plan.md` (Summary section)
-- **Risk Register:** `refined-design.md` (Section 11)
+- **Risk Register:** `poc/refined-design.md` (Section 11)
 
 ### For QA/Testing
-- **Test Strategy:** `refined-design.md` (Section 7.2)
+- **Test Strategy:** `poc/refined-design.md` (Section 7.2)
 - **Test Coverage:** `implementation-plan.md` (Each issue's testing requirements)
-- **POC Tests:** `poc-code/CommandExecutionServiceTests.cs`
+- **POC Tests:** `poc/poc-code/CommandExecutionServiceTests.cs`
 
 ---
 

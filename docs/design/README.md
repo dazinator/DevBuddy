@@ -6,19 +6,19 @@ This directory contains the complete design package for implementing the CLI-fir
 
 **For Stakeholders/Management:**
 - Start with: [SUMMARY.md](SUMMARY.md) - Executive summary and outcomes
-- Then read: [viability-assessment.md](viability-assessment.md) - Technical feasibility
+- Then read: [poc/viability-assessment.md](poc/viability-assessment.md) - Technical feasibility
 
 **For Developers:**
-- Start with: [refined-design.md](refined-design.md) - Complete architecture specification
+- Start with: [poc/refined-design.md](poc/refined-design.md) - Complete architecture specification
 - Then read: [implementation-plan.md](implementation-plan.md) - Detailed sub-issues
-- Reference: [poc-code/](poc-code/) - Working prototype code
+- Reference: [poc/poc-code/](poc/poc-code/) - Working prototype code
 
 **For Security Team:**
-- Start with: [refined-design.md](refined-design.md) Section 4 - Security model
-- Then read: [fail-fast-opportunities.md](fail-fast-opportunities.md) - Risk analysis
+- Start with: [poc/refined-design.md](poc/refined-design.md) Section 4 - Security model
+- Then read: [poc/fail-fast-opportunities.md](poc/fail-fast-opportunities.md) - Risk analysis
 
 **For Project Managers:**
-- Start with: [implementation-plan.md](implementation-plan.md) - 15 sub-issues with estimates
+- Start with: [implementation-plan.md](implementation-plan.md) - 12 sub-issues with estimates
 - Then read: [parent-issue-template.md](parent-issue-template.md) - GitHub tracking template
 
 ## Documents Overview
@@ -33,7 +33,7 @@ This directory contains the complete design package for implementing the CLI-fir
 - Next steps
 - Success criteria
 
-### 2. [viability-assessment.md](viability-assessment.md)
+### 2. [poc/viability-assessment.md](poc/viability-assessment.md)
 **Purpose:** Technical feasibility analysis  
 **Audience:** Technical leads, architects  
 **Contents:**
@@ -44,7 +44,7 @@ This directory contains the complete design package for implementing the CLI-fir
 - Risk analysis
 - Success metrics
 
-### 3. [fail-fast-opportunities.md](fail-fast-opportunities.md)
+### 3. [poc/fail-fast-opportunities.md](poc/fail-fast-opportunities.md)
 **Purpose:** Risk validation strategy  
 **Audience:** Technical leads, project managers  
 **Contents:**
@@ -54,7 +54,7 @@ This directory contains the complete design package for implementing the CLI-fir
 - Risk mitigation plans
 - Timeline and resources
 
-### 4. [refined-design.md](refined-design.md)
+### 4. [poc/refined-design.md](poc/refined-design.md)
 **Purpose:** Complete architecture specification  
 **Audience:** Developers, architects, security team  
 **Contents:**
@@ -70,11 +70,11 @@ This directory contains the complete design package for implementing the CLI-fir
 **Purpose:** Detailed sub-issue breakdown  
 **Audience:** Developers, project managers  
 **Contents:**
-- 15 sub-issues across 4 phases
+- 12 sub-issues across 3 phases
 - Acceptance criteria for each issue
 - Files to create/modify
 - Testing requirements
-- Effort estimates (142-196 hours)
+- Effort estimates (104-144 hours)
 - Dependencies
 
 ### 6. [parent-issue-template.md](parent-issue-template.md)
@@ -87,7 +87,7 @@ This directory contains the complete design package for implementing the CLI-fir
 - Timeline
 - Communication plan
 
-### 7. [poc-code/](poc-code/)
+### 7. [poc/poc-code/](poc/poc-code/)
 **Purpose:** Working prototype implementations  
 **Audience:** Developers  
 **Contents:**
