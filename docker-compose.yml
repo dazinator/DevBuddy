@@ -17,9 +17,31 @@ services:
       - CODE_BASE_PATH=/workspace
     volumes:
       # Mount the sample codebase into the container
-      - ./sample-codebase:/workspace:ro
+      # Note: Read-write mount for development (allows agent to create/modify files)
+      # For production, use :ro flag for read-only security
+      - ./sample-codebase:/workspace
     networks:
       - mcp-network
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+      - DAC_OVERRIDE
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+        reservations:
+          memory: 512M
+    # Restart policy for OOM
+    restart: unless-stopped
 
 networks:
   mcp-network:

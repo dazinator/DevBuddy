@@ -29,4 +29,14 @@ public class ExecutionRequest
     /// Optional environment variables to set for the command
     /// </summary>
     public Dictionary<string, string>? EnvironmentVariables { get; set; }
+
+    /// <summary>
+    /// Correlation ID for tracing related operations
+    /// </summary>
+    public string? CorrelationId { get; set; }
+
+    /// <summary>
+    /// User or client identifier for audit logging
+    /// </summary>
+    public string? User { get; set; }
 }
