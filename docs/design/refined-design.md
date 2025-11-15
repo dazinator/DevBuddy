@@ -1,7 +1,7 @@
 # Refined Design: CLI-First Headless IDE MCP
 
-**Date:** 2025-11-14  
-**Version:** 2.0 (Refined after POC validation)  
+**Date:** 2025-11-15 (Updated)  
+**Version:** 2.1 (Simplified with DevContainer base)  
 **Status:** Ready for Implementation  
 **Author:** Copilot Agent
 
@@ -9,20 +9,22 @@
 
 ## 1. Executive Summary
 
-This document presents the refined design for the Headless IDE MCP server, validated through comprehensive POCs. The design provides AI agents with a powerful, secure, containerized development environment comparable to GitHub Actions runners.
+This document presents the refined design for the Headless IDE MCP server, validated through comprehensive POCs. The design provides AI agents with a powerful, secure, containerized development environment comparable to GitHub Actions runners and GitHub Codespaces.
 
 ### Key Capabilities
 - ✅ Execute arbitrary CLI commands (dotnet, ripgrep, jq, etc.)
-- ✅ Secure sandboxed environment
-- ✅ High-level structured tools for .NET analysis
-- ✅ LSP integration ready (future enhancement)
+- ✅ Secure sandboxed environment using DevContainer base
+- ✅ Pre-configured developer environment (same as Codespaces/Copilot agents)
 - ✅ Docker-based deployment
 
 ### Design Status
 - **Viability:** ✅ Validated via POCs
 - **Security:** ⚠️ Validated with production hardening needed
-- **Performance:** ✅ Acceptable (<5min build, <500MB size)
+- **Container:** ✅ DevContainer base (~2GB, includes all tools)
 - **Integration:** ✅ MCP SDK compatibility confirmed
+
+### Scope
+This design focuses on **shell execution only**. Additional capabilities (OmniSharp, LSP, higher-level .NET tools) are deferred to future work items.
 
 ---
 
@@ -37,36 +39,48 @@ This document presents the refined design for the Headless IDE MCP server, valid
                         │ MCP Protocol (HTTP/JSON-RPC)
                         ▼
 ┌─────────────────────────────────────────────────────────────┐
-│           Headless IDE MCP Server (Container)                │
+│    Headless IDE MCP Server (DevContainer - mcr.microsoft.   │
+│             com/devcontainers/dotnet:1-8.0)                  │
 │  ┌────────────────────────────────────────────────────────┐ │
 │  │           ASP.NET Core MCP Server Layer                │ │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌─────────────┐ │ │
-│  │  │ ShellTools   │  │ DotNetTools  │  │ FileSystem  │ │ │
-│  │  │              │  │              │  │ Tools       │ │ │
-│  │  └──────┬───────┘  └──────┬───────┘  └──────┬──────┘ │ │
-│  └─────────┼─────────────────┼─────────────────┼────────┘ │
-│            │                 │                 │            │
-│  ┌─────────▼─────────────────▼─────────────────▼────────┐ │
-│  │        HeadlessIdeMcp.Core (Business Logic)           │ │
-│  │  ┌──────────────────────┐  ┌─────────────────────┐   │ │
-│  │  │ CommandExecution     │  │  FileSystemService  │   │ │
-│  │  │ Service              │  │                     │   │ │
-│  │  └──────────┬───────────┘  └─────────────────────┘   │ │
-│  └─────────────┼───────────────────────────────────────┘ │
-│                │                                           │
-│  ┌─────────────▼───────────────────────────────────────┐ │
-│  │         System Process Execution (.NET)              │ │
-│  └──────────────────────────────────────────────────────┘ │
-│                                                             │
-│  ┌──────────────────────────────────────────────────────┐ │
-│  │    CLI Tools (dotnet, rg, jq, tree, git, etc.)       │ │
-│  └──────────────────────────────────────────────────────┘ │
-│                                                             │
-│  ┌──────────────────────────────────────────────────────┐ │
-│  │          Workspace (/workspace - mounted)             │ │
-│  │         ├── project files (.cs, .csproj, .sln)        │ │
-│  │         └── build artifacts                           │ │
-│  └──────────────────────────────────────────────────────┘ │
+│  │  ┌──────────────┐                                      │ │
+│  │  │ ShellTools   │  (Focus: shell execution only)       │ │
+│  │  │              │                                       │ │
+│  │  └──────┬───────┘                                      │ │
+│  └─────────┼──────────────────────────────────────────────┘ │
+│            │                                                 │
+│  ┌─────────▼─────────────────────────────────────────────┐ │
+│  │        HeadlessIdeMcp.Core (Business Logic)            │ │
+│  │  ┌──────────────────────┐                              │ │
+│  │  │ CommandExecution     │                              │ │
+│  │  │ Service              │                              │ │
+│  │  └──────────┬───────────┘                              │ │
+│  └─────────────┼──────────────────────────────────────────┘ │
+│                │                                             │
+│  ┌─────────────▼───────────────────────────────────────┐   │
+│  │         System Process Execution (.NET)              │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │  Pre-installed CLI Tools (from DevContainer)          │  │
+│  │  - dotnet 8.0 SDK                                     │  │
+│  │  - git, curl, wget                                    │  │
+│  │  - bash, nano                                         │  │
+│  │  - jq, tree                                           │  │
+│  │  + ripgrep (installed via apt)                       │  │
+│  └──────────────────────────────────────────────────────┘  │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │          Workspace (/workspace - mounted)             │  │
+│  │         ├── project files (.cs, .csproj, .sln)        │  │
+│  │         └── build artifacts                           │  │
+│  └──────────────────────────────────────────────────────┘  │
+│                                                              │
+│  DevContainer Benefits:                                     │
+│  - Non-root user (vscode) pre-configured                   │
+│  - Rich PATH with developer tools                          │
+│  - Consistent with Codespaces/Copilot agents               │
+│  - Standard developer environment setup                    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -79,20 +93,22 @@ This document presents the refined design for the Headless IDE MCP server, valid
 - Dependency injection container
 
 #### HeadlessIdeMcp.Core
-- Business logic for all operations
+- Business logic for shell command execution
 - Process execution with security controls
-- File system operations
-- .NET project analysis (future)
 - Independent of MCP protocol
 
-#### System & CLI Tools
+#### DevContainer Base & CLI Tools
+- Pre-configured developer environment (vscode user, rich PATH)
+- Pre-installed CLI utilities (dotnet, git, curl, jq, tree, nano, bash)
+- Standard environment consistent with Codespaces/Copilot agents
 - Process execution runtime
-- Pre-installed CLI utilities
 - Mounted workspace access
 
 ---
 
 ## 3. Core MCP Tools
+
+This design focuses exclusively on **shell execution tools**. Additional tools (LSP, OmniSharp, higher-level .NET analysis) are deferred to separate future work items.
 
 ### 3.1 Shell Execution Tools (Phase 1 - CRITICAL)
 
@@ -225,73 +241,203 @@ This document presents the refined design for the Headless IDE MCP server, valid
 
 ---
 
-### 3.3 Higher-Level .NET Tools (Phase 2 - FUTURE)
+## 4. Deferred Features (Future Work Items)
 
-These tools can be implemented using CLI commands initially, then enhanced with Roslyn/MSBuild APIs if needed.
+The following features are explicitly **OUT OF SCOPE** for this implementation and should be addressed in separate future work items:
 
-#### dotnet_project_graph
+### 4.1 LSP Integration (OmniSharp)
+- Separate container running OmniSharp
+- LSP-MCP bridge for semantic code navigation
+- Requires additional orchestration layer
 
-**Purpose:** Get structured project/solution information
+**Rationale:** Focus on core shell execution first. LSP can be added independently without blocking this work.
 
-**Implementation Options:**
-1. **CLI-first (Phase 2a):** Parse output of `dotnet sln list`, `dotnet list reference`
-2. **Roslyn (Phase 2b):** Use MSBuild APIs for richer data
+### 4.2 Higher-Level .NET Tools
+These tools can be implemented using CLI commands, but are deferred to reduce scope:
 
-**Output:**
-```json
-{
-  "projects": [
-    {
-      "name": "Project1",
-      "path": "/workspace/src/Project1/Project1.csproj",
-      "references": ["Project2"],
-      "targetFrameworks": ["net8.0"],
-      "sourceFiles": ["Class1.cs", "Class2.cs"]
-    }
-  ]
-}
-```
+- `dotnet_project_graph` - Parse solution/project structure
+- `dotnet_suggest_relevant_files` - File suggestion based on queries
+- `dotnet_diGraph` - DI container analysis
+- `policy_validateCodingRules` - Architecture/coding rules validation
 
----
+**Rationale:** AI agents can achieve similar results by composing shell_execute calls (e.g., `dotnet sln list`, `rg` searches). Structured tools are nice-to-have but not essential for MVP.
 
-#### dotnet_suggest_relevant_files
+### 4.3 Additional MCP Tools
+- Advanced file operations beyond check_file_exists
+- Project scaffolding tools
+- Code generation helpers
 
-**Purpose:** Suggest files relevant to a natural language query
-
-**Implementation:** Combine heuristics with `rg` searches
-
-**Input:**
-```json
-{
-  "query": "authentication logic"
-}
-```
-
-**Output:**
-```json
-{
-  "files": [
-    {
-      "path": "src/Auth/AuthService.cs",
-      "relevance": 0.95,
-      "reason": "Contains AuthService class with authentication methods"
-    }
-  ]
-}
-```
+**Rationale:** Keep initial implementation minimal and focused on proven value (shell execution).
 
 ---
 
-## 4. Security Model
+## 5. Container Specification (DevContainer Base)
 
-### 4.1 Container Security
+### 5.1 Base Image
+
+**Image:** `mcr.microsoft.com/devcontainers/dotnet:1-8.0`
+
+**Why DevContainer:**
+- ✅ Pre-configured non-root user (`vscode`)
+- ✅ Rich PATH with developer tools
+- ✅ Standard tools pre-installed (git, curl, wget, nano, bash)
+- ✅ Consistent with GitHub Codespaces and Copilot agents
+- ✅ Same environment model used by development teams
+- ✅ Avoids manual user/permission configuration
+- ✅ Predictable developer environment semantics
+
+**Trade-offs:**
+- Larger image size (~1.96GB vs ~490MB for dotnet/sdk)
+- More comprehensive tooling out-of-the-box
+- Industry-standard developer container
+
+### 5.2 Dockerfile
+
+```dockerfile
+# Use DevContainer as base for pre-configured developer environment
+FROM mcr.microsoft.com/devcontainers/dotnet:1-8.0 AS base
+WORKDIR /app
+
+# Install ripgrep (only additional tool needed beyond DevContainer defaults)
+RUN apt-get update && apt-get install -y \
+    ripgrep \
+    && rm -rf /var/lib/apt/lists/*
+
+# Verify all tools are available
+RUN echo "=== Tool Verification ===" && \
+    echo "dotnet: $(dotnet --version)" && \
+    echo "git: $(git --version)" && \
+    echo "curl: $(curl --version | head -1)" && \
+    echo "wget: $(wget --version | head -1)" && \
+    echo "rg: $(rg --version | head -1)" && \
+    echo "jq: $(jq --version)" && \
+    echo "tree: $(tree --version | head -1)" && \
+    echo "bash: $(bash --version | head -1)" && \
+    echo "nano: $(nano --version | head -1)"
+
+# Create workspace directory
+RUN mkdir -p /workspace && chown vscode:vscode /workspace
+
+# Set environment variables
+ENV CODE_BASE_PATH=/workspace
+ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
+ENV ASPNETCORE_ENVIRONMENT=Production
+
+# Expose ports
+EXPOSE 8080
+EXPOSE 8081
+
+# Build stage
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Copy and restore
+COPY ["src/HeadlessIdeMcp.Server/HeadlessIdeMcp.Server.csproj", "HeadlessIdeMcp.Server/"]
+COPY ["src/HeadlessIdeMcp.Core/HeadlessIdeMcp.Core.csproj", "HeadlessIdeMcp.Core/"]
+COPY ["src/Directory.Build.props", "./"]
+COPY ["src/Directory.Packages.props", "./"]
+COPY ["src/global.json", "./"]
+
+RUN dotnet restore "HeadlessIdeMcp.Server/HeadlessIdeMcp.Server.csproj"
+
+# Copy source and build
+COPY src/HeadlessIdeMcp.Server/ HeadlessIdeMcp.Server/
+COPY src/HeadlessIdeMcp.Core/ HeadlessIdeMcp.Core/
+
+RUN dotnet build "HeadlessIdeMcp.Server/HeadlessIdeMcp.Server.csproj" -c Release -o /app/build
+RUN dotnet publish "HeadlessIdeMcp.Server/HeadlessIdeMcp.Server.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+# Final stage - combine DevContainer with published app
+FROM base AS final
+WORKDIR /app
+
+# Copy published application
+COPY --from=build --chown=vscode:vscode /app/publish .
+
+# Switch to non-root user (vscode user from DevContainer)
+USER vscode
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+ENTRYPOINT ["dotnet", "HeadlessIdeMcp.Server.dll"]
+```
+
+### 5.3 Pre-installed CLI Tools (from DevContainer)
+
+| Tool | Pre-installed | Purpose |
+|------|---------------|---------|
+| dotnet | ✅ 8.0 SDK | .NET development and CLI |
+| git | ✅ 2.51+ | Version control |
+| curl | ✅ 7.88+ | HTTP requests |
+| wget | ✅ 1.21+ | File downloads |
+| jq | ✅ 1.6 | JSON processing |
+| tree | ✅ 2.1+ | Directory visualization |
+| nano | ✅ 7.2 | Text editor |
+| bash | ✅ 5.2+ | Shell scripting |
+| find/grep | ✅ Standard | File search |
+| **ripgrep** | ➕ Added | Fast code search (apt install) |
+
+**Legend:**
+- ✅ = Pre-installed in DevContainer base
+- ➕ = Added via apt-get
+
+### 5.4 User Configuration
+
+**DevContainer Benefits:**
+- User: `vscode` (non-root, UID 1000)
+- Home: `/home/vscode`
+- Shell: bash with oh-my-zsh pre-configured
+- PATH: Rich developer PATH including `/home/vscode/.dotnet/tools`
+- Permissions: Correctly configured for developer workflows
+
+**No manual configuration needed** for:
+- User creation
+- Group assignment  
+- Home directory setup
+- Shell configuration
+- PATH configuration
+- Tool permissions
+
+### 5.5 Environment Variables
+
+```dockerfile
+ENV CODE_BASE_PATH=/workspace
+ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
+ENV ASPNETCORE_ENVIRONMENT=Production
+# DevContainer provides additional developer-friendly env vars
+```
+
+### 5.6 Build Metrics (Estimated)
+
+| Metric | DevContainer Base | Previous (dotnet/sdk) |
+|--------|-------------------|----------------------|
+| Base Image Size | ~1.96GB | ~450MB |
+| With App | ~2.0GB | ~490MB |
+| First Build Time | ~3-4 min | ~2.5 min |
+| Cached Build | ~30 sec | ~20 sec |
+| Tools Installed | 10+ | 8 (manual) |
+| Manual Config | Minimal | Moderate |
+
+**Analysis:** Larger image size is acceptable trade-off for:
+- Industry-standard developer environment
+- Reduced configuration complexity
+- Consistency with Codespaces/Copilot agents
+- Pre-configured user/permissions/PATH
+
+---
+
+## 6. Security Model
+
+### 6.1 Container Security
 
 #### Docker Configuration
 ```yaml
 services:
   headless-ide-mcp:
     image: headless-ide-mcp:latest
-    user: "1001:1001"              # Non-root user
+    # DevContainer uses vscode user (UID 1000) - automatically configured
     read_only: true                # Read-only root filesystem
     security_opt:
       - no-new-privileges:true     # Prevent privilege escalation
@@ -316,7 +462,7 @@ volumes:
   - /tmp/mcp:/tmp                  # Writable temp directory
 ```
 
-### 4.2 Process Execution Security
+### 6.2 Process Execution Security
 
 #### Security Controls
 
@@ -368,7 +514,7 @@ volumes:
 }
 ```
 
-### 4.3 Additional Security Measures
+### 6.3 Additional Security Measures
 
 1. **Error Message Sanitization:**
    - Remove sensitive paths from error messages
@@ -392,46 +538,9 @@ volumes:
 
 ---
 
-## 5. Container Specification
+## 7. Integration with MCP SDK
 
-### 5.1 Dockerfile
-
-See `poc-code/Dockerfile.enhanced` for complete implementation.
-
-**Key Features:**
-- Base: `mcr.microsoft.com/dotnet/sdk:8.0` (~450MB)
-- Non-root user: `mcpuser` (UID 1001)
-- CLI tools: ripgrep, jq, tree, git, curl
-- Total size: ~490MB
-- Build time: ~2.5 minutes (first), ~20 seconds (cached)
-
-### 5.2 Installed CLI Tools
-
-| Tool | Version | Purpose |
-|------|---------|---------|
-| dotnet | 8.0+ | .NET CLI and SDK |
-| rg (ripgrep) | 14.0+ | Fast code search |
-| jq | 1.6+ | JSON processing |
-| tree | Latest | Directory visualization |
-| git | 2.x | Version control |
-| bash | 5.x | Shell scripting |
-| curl | Latest | HTTP requests |
-| find/grep | Latest | File search |
-
-### 5.3 Environment Configuration
-
-```dockerfile
-ENV CODE_BASE_PATH=/workspace
-ENV PATH="${PATH}:/workspace/tools"
-ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
-ENV ASPNETCORE_ENVIRONMENT=Production
-```
-
----
-
-## 6. Integration with MCP SDK
-
-### 6.1 Service Registration
+### 7.1 Service Registration
 
 **Program.cs:**
 ```csharp
@@ -477,7 +586,7 @@ app.MapGet("/health", () => Results.Ok(new
 app.Run();
 ```
 
-### 6.2 Tool Implementation Pattern
+### 7.2 Tool Implementation Pattern
 
 ```csharp
 [McpServerToolType]
@@ -671,26 +780,30 @@ git diff HEAD~1
 
 ## 9. Implementation Roadmap
 
+**Note:** This design focuses on shell execution only. Higher-level .NET tools and LSP integration are deferred to separate future work items.
+
 ### Phase 1: Core Shell Execution (Weeks 1-2) ✅ CRITICAL
 
-**Goal:** Prove CLI-first architecture
+**Goal:** Prove CLI-first architecture with DevContainer base
 
 **Tasks:**
 - ✅ Integrate `CommandExecutionService` into Core project
 - ✅ Add `ShellTools` to Server project  
-- ✅ Update Dockerfile with CLI tools
+- ✅ Update Dockerfile to use DevContainer base (mcr.microsoft.com/devcontainers/dotnet:1-8.0)
+- ✅ Install only ripgrep (other tools pre-installed)
 - ✅ Integration tests for shell execution
 - ✅ Security testing (path traversal, timeouts)
 - ✅ Documentation updates
 
-**Deliverable:** Working shell_execute tool in containerized MCP server
+**Deliverable:** Working shell_execute tool in DevContainer-based MCP server
 
 **Success Criteria:**
-- Can execute dotnet, rg, jq commands
+- Can execute dotnet, rg, jq, git, tree commands
 - Timeouts enforced correctly
 - Path validation prevents escapes
 - Concurrent execution works
 - All integration tests pass
+- vscode user (from DevContainer) works correctly
 
 ---
 
@@ -722,11 +835,10 @@ git diff HEAD~1
 
 **Tasks:**
 - Optimize shell_execute_json
-- Add file upload/download capabilities (if needed)
-- Environment variable configuration
 - Better error messages
 - Enhanced health check endpoint
 - Metrics and monitoring
+- Performance tuning
 
 **Deliverable:** Feature-complete shell execution system
 
@@ -734,43 +846,39 @@ git diff HEAD~1
 - JSON parsing works reliably
 - Clear, actionable error messages
 - Monitoring in place
+- Production-stable
 
 ---
 
-### Phase 4: Higher-Level Tools (Weeks 4-8) [OPTIONAL]
+## 10. Future Work (Out of Scope)
 
-**Goal:** Structured .NET analysis tools
+The following capabilities are **explicitly deferred** to separate future work items:
 
-**Tasks:**
-- Implement dotnet_project_graph (CLI-based)
-- Implement dotnet_suggest_relevant_files
-- (Optional) Add Roslyn integration
-- (Optional) Add DI graph analysis
-- Documentation for structured tools
+### Higher-Level .NET Tools
+- dotnet_project_graph (CLI-based or Roslyn)
+- dotnet_suggest_relevant_files
+- dotnet_diGraph (DI container analysis)
+- policy_validateCodingRules
 
-**Deliverable:** Enhanced .NET-specific capabilities
+**Why Deferred:** AI agents can compose shell_execute calls to achieve similar results. These tools are valuable but not essential for MVP.
 
-**Success Criteria:**
-- Can extract project graph from solutions
-- File suggestion works for common queries
-- At least one structured tool working
-
----
-
-### Phase 5: LSP Integration (Future)
-
-**Goal:** Semantic code navigation
-
-**Approach:**
+### LSP Integration (OmniSharp)
 - Separate container running OmniSharp
-- Use lsp-mcp for MCP bridge
-- AI agent orchestrates both servers
+- LSP-MCP bridge for semantic navigation
+- Multi-container orchestration
 
-**Not in scope for initial implementation**
+**Why Deferred:** Adds complexity and can be implemented independently without blocking shell execution capability.
+
+### Additional MCP Tools
+- Advanced file operations
+- Project scaffolding
+- Code generation helpers
+
+**Why Deferred:** Keep initial scope minimal and focused on validated high-value use case (shell execution).
 
 ---
 
-## 10. Success Metrics
+## 11. Success Metrics
 
 ### Technical Metrics
 - ✅ Command execution success rate > 99%
@@ -792,7 +900,7 @@ git diff HEAD~1
 
 ---
 
-## 11. Risk Register
+## 12. Risk Register
 
 | Risk | Probability | Impact | Mitigation |
 |------|------------|--------|------------|
@@ -804,7 +912,7 @@ git diff HEAD~1
 
 ---
 
-## 12. Alternatives Considered
+## 13. Alternatives Considered
 
 ### Alternative 1: Pure MCP Tools (No CLI)
 **Rejected:** Too much custom code, less flexible
@@ -820,7 +928,7 @@ git diff HEAD~1
 
 ---
 
-## 13. Appendices
+## 14. Appendices
 
 ### Appendix A: Complete File Structure
 
@@ -899,7 +1007,7 @@ ALLOWED_PATHS=/workspace,/tmp          # Optional: Allowed working directories
 
 ---
 
-## 14. Conclusion
+## 15. Conclusion
 
 This refined design provides a clear, validated path to implementing the CLI-first Headless IDE MCP architecture. All critical POCs have passed, and the design is ready for phased implementation.
 

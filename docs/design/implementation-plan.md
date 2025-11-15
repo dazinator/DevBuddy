@@ -1,7 +1,7 @@
 # Implementation Plan: CLI-First Headless IDE MCP
 
-**Date:** 2025-11-14  
-**Version:** 1.0  
+**Date:** 2025-11-15 (Updated)  
+**Version:** 2.0 (Simplified with DevContainer)  
 **Status:** Ready for Breakdown into Issues  
 **Author:** Copilot Agent
 
@@ -9,17 +9,22 @@
 
 ## Overview
 
-This document breaks down the implementation of the CLI-first Headless IDE MCP architecture into concrete, actionable sub-issues. Each sub-issue represents a complete unit of work that can be implemented as a separate PR.
+This document breaks down the implementation of the simplified CLI-first Headless IDE MCP architecture into concrete, actionable sub-issues. Each sub-issue represents a complete unit of work that can be implemented as a separate PR.
+
+**Simplifications in v2.0:**
+- Using DevContainer base image (reduces configuration effort)
+- Focus on shell execution only (no OmniSharp, no higher-level .NET tools)
+- Deferred features moved to separate future work items
 
 ---
 
 ## Implementation Phases
 
 ```
-Phase 1: Core Shell Execution (2 weeks)
+Phase 1: Core Shell Execution (1-2 weeks)
   ├── Issue 1.1: Add CommandExecutionService to Core
   ├── Issue 1.2: Add ShellTools MCP integration
-  ├── Issue 1.3: Update Dockerfile with CLI tools
+  ├── Issue 1.3: Update Dockerfile to DevContainer base
   ├── Issue 1.4: Add integration tests
   └── Issue 1.5: Update documentation
 
@@ -34,10 +39,10 @@ Phase 3: Enhanced Tools (1 week)
   ├── Issue 3.2: Enhanced error handling
   └── Issue 3.3: Add monitoring and metrics
 
-Phase 4: Higher-Level Tools (2-4 weeks) [OPTIONAL]
-  ├── Issue 4.1: Implement dotnet_project_graph
-  ├── Issue 4.2: Implement dotnet_suggest_relevant_files
-  └── Issue 4.3: Documentation for structured tools
+DEFERRED (separate future work items):
+  - Higher-level .NET tools (dotnet_project_graph, etc.)
+  - LSP/OmniSharp integration
+  - Advanced file operations
 ```
 
 ---
@@ -137,55 +142,66 @@ Add MCP tool implementations that expose the CommandExecutionService to AI agent
 
 ---
 
-### Issue 1.3: Update Dockerfile with CLI Tools
+### Issue 1.3: Update Dockerfile to DevContainer Base
 
-**Title:** Enhance container with CLI tools (ripgrep, jq, tree, git, etc.)
+**Title:** Switch to DevContainer base image and configure for MCP server
 
 **Description:**
-Update the Dockerfile to include all necessary CLI tools while maintaining security and optimizing for size/build time.
+Update the Dockerfile to use the Microsoft DevContainer base image (mcr.microsoft.com/devcontainers/dotnet:1-8.0) which includes pre-configured user, tools, and environment. This simplifies configuration and aligns with GitHub Codespaces/Copilot agents.
 
 **Acceptance Criteria:**
-- [ ] Dockerfile updated with CLI tool installation
-- [ ] Non-root user created (mcpuser)
-- [ ] All tools verified during build
-- [ ] Working /workspace and /tmp directories created
-- [ ] PATH updated for custom tools directory
-- [ ] Container size < 600MB
-- [ ] Build time < 5 minutes (first build)
-- [ ] Health check configured
-- [ ] docker-compose.yml updated with security options
+- [ ] Dockerfile updated to use DevContainer base image
+- [ ] Ripgrep installed (only additional tool needed)
+- [ ] Tool verification during build
+- [ ] Working /workspace directory created with correct ownership
+- [ ] vscode user from DevContainer used (no manual user creation needed)
 - [ ] Container builds successfully
-- [ ] All tools accessible from within container
+- [ ] All tools accessible from within container (dotnet, git, curl, wget, jq, tree, nano, bash, rg)
+- [ ] docker-compose.yml updated (no user override needed)
+- [ ] Health check configured
 
 **Files to Create/Modify:**
-- `Dockerfile` (MODIFY)
-- `docker-compose.yml` (MODIFY)
+- `Dockerfile` (MODIFY - switch to DevContainer base)
+- `docker-compose.yml` (MODIFY - remove user override, DevContainer handles it)
 - `.dockerignore` (NEW or UPDATE)
 
-**Tools to Install:**
-- ripgrep (rg)
-- jq
-- tree
-- git
-- curl
-- wget
-- bash, coreutils, findutils (already present, but verify)
+**DevContainer Base Benefits:**
+- Non-root user (vscode) pre-configured
+- Git, curl, wget, jq, tree, nano, bash pre-installed
+- Rich PATH including developer tools
+- Consistent with Codespaces/Copilot agents
+- No manual user/permission configuration
+
+**Tools Pre-installed in DevContainer:**
+- ✅ dotnet 8.0 SDK
+- ✅ git
+- ✅ curl, wget
+- ✅ jq
+- ✅ tree  
+- ✅ nano
+- ✅ bash (with oh-my-zsh)
+- ➕ ripgrep (install via apt-get)
 
 **Implementation Guide:**
 - Use `docs/design/poc-code/Dockerfile.enhanced` as reference
-- Use multi-stage build for optimization
-- Single RUN command for apt-get to reduce layers
-- Clean up apt lists after installation
-- Add tool version verification in build
+- Multi-stage build: DevContainer base → build → final with DevContainer
+- Only install ripgrep via apt-get
+- Verify all tools during build
+- Use vscode user from DevContainer
 
 **Testing Requirements:**
 - Build container successfully
 - Verify all tools available: `docker exec <container> rg --version`
-- Test with sample commands
-- Measure container size: `docker images`
+- Test with sample commands as vscode user
+- Measure container size: `docker images` (expect ~2GB)
 - Measure build time
 
-**Estimated Effort:** 4-6 hours
+**Trade-offs:**
+- Larger image (~2GB vs ~490MB) but comprehensive developer environment
+- Reduced configuration complexity
+- Industry-standard base
+
+**Estimated Effort:** 3-4 hours (reduced from 4-6 due to less configuration)
 
 **Dependencies:** None (can be parallel with 1.1, 1.2)
 
@@ -682,156 +698,36 @@ Add comprehensive metrics collection to monitor system health, performance, and 
 
 ---
 
-## Phase 4: Higher-Level Tools [OPTIONAL]
+## Deferred Features (Separate Future Work Items)
 
-### Issue 4.1: Implement dotnet_project_graph
+The following features are **OUT OF SCOPE** for this implementation and will be addressed as separate issues/work items in the future:
 
-**Title:** Add structured .NET project graph extraction tool
+### Higher-Level .NET Tools
+- **dotnet_project_graph** - Structured project/solution analysis
+- **dotnet_suggest_relevant_files** - AI-powered file suggestion
+- **dotnet_diGraph** - DI container analysis  
+- **policy_validateCodingRules** - Architecture validation
 
-**Description:**
-Implement a tool that extracts structured information about .NET projects and solutions, using CLI commands initially.
+**Rationale:** AI agents can compose shell_execute calls to achieve similar results. These tools add value but aren't essential for MVP. Defer to validate shell execution approach first.
 
-**Acceptance Criteria:**
-- [ ] dotnet_project_graph tool implemented
-- [ ] Parses solution files
-- [ ] Lists all projects
-- [ ] Extracts project references
-- [ ] Includes target frameworks
-- [ ] Returns structured JSON
-- [ ] Integration tests added
-- [ ] Documentation updated
-- [ ] Performance acceptable (< 10s for large solutions)
+### LSP/OmniSharp Integration
+- Separate container with OmniSharp
+- LSP-MCP bridge
+- Semantic code navigation
+- Multi-container orchestration
 
-**Files to Create/Modify:**
-- `src/HeadlessIdeMcp.Server/Tools/DotNetTools.cs` (NEW)
-- `src/HeadlessIdeMcp.Core/DotNet/ProjectGraphService.cs` (NEW)
-- `src/HeadlessIdeMcp.IntegrationTests/DotNetToolsTests.cs` (NEW)
+**Rationale:** Adds significant complexity and can be implemented independently once shell execution is proven valuable.
 
-**Implementation Approach:**
-- Use `dotnet sln list` to get projects
-- Use `dotnet list <project> reference` to get references
-- Parse output to build graph structure
-- (Optional Phase 2: Use MSBuild APIs for richer data)
+### Additional MCP Tools
+- Advanced file operations beyond check_file_exists
+- Project scaffolding helpers
+- Code generation tools
 
-**Output Format:**
-```json
-{
-  "solution": "/workspace/Solution.sln",
-  "projects": [
-    {
-      "name": "Project1",
-      "path": "/workspace/src/Project1/Project1.csproj",
-      "references": ["Project2"],
-      "targetFrameworks": ["net8.0"]
-    }
-  ]
-}
-```
-
-**Testing Requirements:**
-- Test with sample-codebase
-- Test with multiple projects
-- Test with project references
-- Test error handling
-
-**Estimated Effort:** 12-16 hours
-
-**Dependencies:** Phase 1 complete
-
-**Priority:** Low (optional enhancement)
+**Rationale:** Keep scope minimal. Add based on user feedback and validated use cases.
 
 ---
 
-### Issue 4.2: Implement dotnet_suggest_relevant_files
-
-**Title:** Add file suggestion tool based on natural language queries
-
-**Description:**
-Implement a tool that suggests relevant code files based on natural language queries, using heuristics and ripgrep.
-
-**Acceptance Criteria:**
-- [ ] dotnet_suggest_relevant_files tool implemented
-- [ ] Accepts natural language query
-- [ ] Returns ranked list of files
-- [ ] Includes relevance score and reason
-- [ ] Uses ripgrep for content search
-- [ ] Uses heuristics (file names, paths)
-- [ ] Integration tests added
-- [ ] Documentation updated
-- [ ] Performance acceptable (< 5s per query)
-
-**Files to Create/Modify:**
-- `src/HeadlessIdeMcp.Server/Tools/DotNetTools.cs` (MODIFY)
-- `src/HeadlessIdeMcp.Core/DotNet/FileSuggestionService.cs` (NEW)
-- `src/HeadlessIdeMcp.IntegrationTests/DotNetToolsTests.cs` (MODIFY)
-
-**Implementation Approach:**
-1. Parse query for keywords
-2. Search file names and paths
-3. Use ripgrep to search file contents
-4. Rank results by relevance
-5. Return top N files with reasons
-
-**Output Format:**
-```json
-{
-  "query": "authentication logic",
-  "files": [
-    {
-      "path": "src/Auth/AuthService.cs",
-      "relevance": 0.95,
-      "reason": "Contains AuthService class and Login method"
-    }
-  ]
-}
-```
-
-**Testing Requirements:**
-- Test with various queries
-- Test relevance ranking
-- Test with sample-codebase
-- Performance tests
-
-**Estimated Effort:** 16-24 hours
-
-**Dependencies:** Phase 1 complete, Issue 4.1 helpful
-
-**Priority:** Low (optional enhancement)
-
----
-
-### Issue 4.3: Documentation for Structured Tools
-
-**Title:** Create comprehensive documentation for higher-level .NET tools
-
-**Description:**
-Document all higher-level tools with usage examples, best practices, and integration guides.
-
-**Acceptance Criteria:**
-- [ ] Usage guide for dotnet_project_graph
-- [ ] Usage guide for dotnet_suggest_relevant_files
-- [ ] Best practices documented
-- [ ] Integration examples (with AI agents)
-- [ ] Performance considerations
-- [ ] Troubleshooting guide
-- [ ] All examples tested
-
-**Files to Create/Modify:**
-- `docs/dotnet-tools-guide.md` (NEW)
-- `docs/usage-guide.md` (MODIFY)
-- `README.md` (MODIFY)
-- `test-mcp-server.http` (MODIFY)
-
-**Documentation Sections:**
-1. Overview of structured tools
-2. When to use structured vs shell tools
-3. dotnet_project_graph usage
-4. dotnet_suggest_relevant_files usage
-5. Integration with AI agent workflows
-6. Performance tips
-7. Troubleshooting
-
-**Testing Requirements:**
+## Issue Tracking Template
 - All examples must work
 - Documentation reviewed
 - Spell check and formatting
@@ -889,22 +785,27 @@ Phase [1/2/3/4]
 
 ## Summary
 
-### Total Estimated Effort
+### Total Estimated Effort (Updated for v2.0 - Simplified Scope)
 
-| Phase | Issues | Estimated Hours | Estimated Weeks |
-|-------|--------|----------------|-----------------|
-| Phase 1 | 5 | 46-62 hours | 1.5-2 weeks |
-| Phase 2 | 4 | 42-58 hours | 1.5-2 weeks |
-| Phase 3 | 3 | 20-28 hours | 0.5-1 week |
-| Phase 4 | 3 | 34-48 hours | 1-1.5 weeks |
-| **Total** | **15** | **142-196 hours** | **4.5-6.5 weeks** |
+| Phase | Issues | Estimated Hours | Estimated Weeks | Notes |
+|-------|--------|----------------|-----------------|-------|
+| Phase 1 | 5 | 42-58 hours | 1-1.5 weeks | Reduced 4 hours (DevContainer simplifies setup) |
+| Phase 2 | 4 | 42-58 hours | 1-1.5 weeks | Unchanged |
+| Phase 3 | 3 | 20-28 hours | 0.5-1 week | Unchanged |
+| **Total (In Scope)** | **12** | **104-144 hours** | **2.5-4 weeks** | **Reduced from 142-196 hours** |
+| Deferred | - | - | - | Higher-level tools, LSP moved to future work |
+
+**Effort Reduction:** ~38-52 hours saved by:
+- Using DevContainer (saves ~4 hours in configuration)
+- Removing Phase 4 higher-level tools (saves 34-48 hours)
+- Simplified scope focused on shell execution only
 
 ### Critical Path
 
 ```
 Issue 1.1 (CommandExecutionService)
     ↓
-Issue 1.2 (ShellTools) ← Issue 1.3 (Dockerfile)
+Issue 1.2 (ShellTools) ← Issue 1.3 (DevContainer Dockerfile)
     ↓
 Issue 1.4 (Integration Tests)
     ↓
@@ -914,19 +815,20 @@ Phase 1 Complete → Deploy to Staging
     ↓
 Phase 2 (Security Hardening) → Deploy to Production
     ↓
-Phase 3 (Enhancements) → Iterate based on feedback
+Phase 3 (Enhancements) → Production stable
     ↓
-Phase 4 (Optional) → Advanced features
+FUTURE: Higher-level tools, LSP (separate work items)
 ```
 
 ### Milestone Definitions
 
-**Milestone 1: MVP (Phase 1 Complete)**
-- shell_execute working in container
-- CLI tools available
+**Milestone 1: MVP (Phase 1 Complete)** ⭐ PRIMARY GOAL
+- shell_execute working in DevContainer
+- CLI tools available (dotnet, rg, jq, git, tree, etc.)
 - Basic security controls
 - Integration tests passing
 - Documentation updated
+- **Deliverable:** Usable MCP server for shell command execution
 
 **Milestone 2: Production Ready (Phase 2 Complete)**
 - Security hardening complete
@@ -935,17 +837,17 @@ Phase 4 (Optional) → Advanced features
 - Security testing passed
 - Ready for production deployment
 
-**Milestone 3: Enhanced (Phase 3 Complete)**
+**Milestone 3: Enhanced (Phase 3 Complete)** 
 - Optimized JSON handling
 - Better error messages
 - Monitoring and metrics
 - Production-proven and stable
+- **Deliverable:** Feature-complete, production-quality MCP server
 
-**Milestone 4: Advanced (Phase 4 Complete) [OPTIONAL]**
-- Structured .NET tools
-- Project graph analysis
-- File suggestion
-- Full feature set
+**FUTURE: Advanced Features (Deferred)**
+- Structured .NET tools (separate work items)
+- LSP/OmniSharp integration (separate work items)
+- Additional MCP tools as needed (based on user feedback)
 
 ---
 
