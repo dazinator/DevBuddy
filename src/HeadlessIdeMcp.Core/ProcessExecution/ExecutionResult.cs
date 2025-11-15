@@ -29,4 +29,9 @@ public class ExecutionResult
     /// Time taken to execute the command
     /// </summary>
     public TimeSpan ExecutionTime { get; set; }
+
+    /// <summary>
+    /// Correlation ID for tracing related operations
+    /// </summary>
+    public string? CorrelationId { get; set; }
 }

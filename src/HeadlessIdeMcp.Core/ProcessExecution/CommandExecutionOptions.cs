@@ -31,4 +31,16 @@ public class CommandExecutionOptions
     {
         "rm", "dd", "mkfs", "fdisk"
     };
+
+    /// <summary>
+    /// Whether to sanitize error messages to prevent information disclosure
+    /// Default: false (for development). Should be enabled in production.
+    /// </summary>
+    public bool SanitizeErrorMessages { get; set; } = false;
+
+    /// <summary>
+    /// Whether to enable audit logging for all command executions
+    /// Default: true (production-ready)
+    /// </summary>
+    public bool EnableAuditLogging { get; set; } = true;
 }

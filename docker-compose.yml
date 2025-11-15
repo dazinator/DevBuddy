@@ -20,6 +20,26 @@ services:
       - ./sample-codebase:/workspace:ro
     networks:
       - mcp-network
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+      - DAC_OVERRIDE
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+        reservations:
+          memory: 512M
+    # Restart policy for OOM
+    restart: unless-stopped
 
 networks:
   mcp-network:
