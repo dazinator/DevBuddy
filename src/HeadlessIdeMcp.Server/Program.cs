@@ -28,6 +28,9 @@ builder.Services
 
 var app = builder.Build();
 
+// Add API key authentication middleware (must be before MapMcp)
+app.UseApiKeyAuthentication();
+
 // Map MCP endpoints
 app.MapMcp();
 
@@ -35,4 +38,7 @@ app.MapMcp();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", codeBasePath }));
 
 app.Run();
+
+// Make Program class accessible to tests
+public partial class Program { }
 

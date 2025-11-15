@@ -5,6 +5,7 @@ This document describes the security controls implemented in the Headless IDE MC
 ## Table of Contents
 
 - [Security Architecture](#security-architecture)
+- [Authentication](#authentication)
 - [Command Execution Security](#command-execution-security)
 - [Error Message Sanitization](#error-message-sanitization)
 - [Container Security](#container-security)
@@ -17,12 +18,31 @@ This document describes the security controls implemented in the Headless IDE MC
 
 The Headless IDE MCP server implements defense-in-depth security with multiple layers of protection:
 
-1. **Container Isolation**: Runs in Docker with limited privileges
-2. **Command Validation**: Allowlist/denylist enforcement
-3. **Path Restrictions**: Confined to approved directories
-4. **Error Sanitization**: Prevents information disclosure
-5. **Audit Logging**: Tracks all command executions
-6. **Resource Limits**: Prevents resource exhaustion attacks
+1. **Authentication**: Optional API key authentication for access control
+2. **Container Isolation**: Runs in Docker with limited privileges
+3. **Command Validation**: Allowlist/denylist enforcement
+4. **Path Restrictions**: Confined to approved directories
+5. **Error Sanitization**: Prevents information disclosure
+6. **Audit Logging**: Tracks all command executions
+7. **Resource Limits**: Prevents resource exhaustion attacks
+
+## Authentication
+
+The server supports optional API key authentication. See [Authentication Documentation](authentication.md) for details.
+
+**Development**: Authentication disabled by default for local use
+**Production**: Enable API key authentication for security
+
+```json
+{
+  "Authentication": {
+    "ApiKey": {
+      "Enabled": true,
+      "Key": "your-secure-api-key"
+    }
+  }
+}
+```
 
 ## Command Execution Security
 

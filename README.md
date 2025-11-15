@@ -64,6 +64,7 @@ Content-Type: application/json
 
 The Headless IDE MCP server implements production-grade security controls:
 
+- **API Key Authentication**: Optional authentication for access control (disabled by default)
 - **Command Validation**: Allowlist/denylist enforcement to block dangerous commands
 - **Path Restrictions**: Commands confined to approved directories only
 - **Error Sanitization**: Generic error messages prevent information disclosure
@@ -74,6 +75,7 @@ The Headless IDE MCP server implements production-grade security controls:
 - **Comprehensive Testing**: 44 integration tests including 15 security-specific tests
 
 For detailed security information, see:
+- **[Authentication & Concurrency](docs/authentication.md)** - API key auth and concurrent usage
 - **[Security Documentation](docs/security.md)** - Security architecture and controls
 - **[Security Test Report](docs/security-test-report.md)** - Penetration testing results
 - **[Security Checklist](docs/security-checklist.md)** - Pre-deployment validation
