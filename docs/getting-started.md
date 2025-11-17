@@ -6,6 +6,8 @@ This guide will help you get started with the Headless IDE Model Context Protoco
 
 The Headless IDE MCP server is an ASP.NET Core application that provides MCP tools for analyzing .NET codebases. It uses the [ModelContextProtocol.AspNetCore](https://www.nuget.org/packages/ModelContextProtocol.AspNetCore) library to expose tools that can be consumed by AI assistants and other MCP clients.
 
+**Want to use this with Claude Desktop?** See the [Claude Desktop Setup Guide](claude-desktop-setup.md) for step-by-step instructions on connecting Claude Desktop to this server.
+
 ## Prerequisites
 
 - [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
@@ -178,6 +180,7 @@ docker build -t headless-ide-mcp:dev .
 
 ## Next Steps
 
+- **[Connect to Claude Desktop](claude-desktop-setup.md)** - Configure Claude Desktop to use this MCP server
 - Explore the sample codebase at `sample-codebase/` to understand what the tools can analyze
 - Review the integration tests at `src/HeadlessIdeMcp.IntegrationTests/` to see how tools are tested
 - Add new tools by creating classes in `HeadlessIdeMcp.Server` with the `[McpServerToolType]` attribute

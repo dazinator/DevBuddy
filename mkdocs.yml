@@ -32,6 +32,13 @@ markdown_extensions:
   tables: {}
 nav:
   - Welcome: index.md
+  - Getting Started: getting-started.md
+  - Claude Desktop Setup: claude-desktop-setup.md
+  - Project Setup: project-setup.md
+  - Authentication: authentication.md
+  - Security: security.md
+  - Operations: operations.md
+  - Shell Execution Usage: shell-execution-usage.md
     
 extra:
   version:

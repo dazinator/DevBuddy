@@ -1,0 +1,297 @@
+# Connecting Claude Desktop to Headless IDE MCP
+
+This guide explains how to configure Claude Desktop to connect to the Headless IDE MCP server running in a Docker container.
+
+## Overview
+
+The Headless IDE MCP server uses **HTTP transport** and runs as a containerized service. Claude Desktop, however, natively supports **stdio transport** (communicating with local processes via standard input/output). To bridge this gap, you'll need to use a proxy tool that converts stdio messages to HTTP requests.
+
+## Architecture
+
+```
+Claude Desktop (stdio) 
+    ↓
+mcp-server-and-gw (bridge proxy)
+    ↓
+Headless IDE MCP Server (HTTP) in Docker Container
+```
+
+## Prerequisites
+
+- Claude Desktop installed ([download here](https://claude.ai/download))
+- Docker Desktop running
+- Node.js and npm installed (for npx)
+- Headless IDE MCP server running in Docker
+
+## Step 1: Start the Headless IDE MCP Server
+
+First, ensure the MCP server is running with Docker Compose:
+
+```bash
+docker-compose up --build
+```
+
+The server will be available at `http://localhost:5000`
+
+Verify it's running:
+```bash
+curl http://localhost:5000/health
+```
+
+You should see:
+```json
+{"status":"healthy","codeBasePath":"/workspace"}
+```
+
+## Step 2: Configure Claude Desktop
+
+### Locate the Configuration File
+
+The Claude Desktop configuration file location depends on your operating system:
+
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+- **Linux**: `~/.config/Claude/claude_desktop_config.json`
+
+**Tip**: You can also access this file via Claude Desktop's menu: `Settings > Developer > Edit Config`
+
+### Add the MCP Server Configuration
+
+Edit the `claude_desktop_config.json` file and add the following configuration:
+
+```json
+{
+  "mcpServers": {
+    "headless-ide": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-server-and-gw",
+        "http://localhost:5000/"
+      ],
+      "env": {
+        "MCP_SERVER_NAME": "headless-ide-mcp"
+      }
+    }
+  }
+}
+```
+
+**Configuration Breakdown:**
+- `headless-ide`: A friendly name for your MCP server (you can choose any name)
+- `command`: Uses `npx` to run the bridge proxy on-the-fly
+- `args`: 
+  - `-y`: Auto-confirms package installation
+  - `mcp-server-and-gw`: The stdio-to-HTTP bridge package
+  - `http://localhost:5000/`: The URL of your MCP server
+- `env`: Optional environment variables
+
+### Alternative: Using a Pre-installed Bridge
+
+If you prefer to install the bridge proxy globally:
+
+```bash
+npm install -g mcp-server-and-gw
+```
+
+Then configure Claude Desktop to use it directly:
+
+```json
+{
+  "mcpServers": {
+    "headless-ide": {
+      "command": "mcp-server-and-gw",
+      "args": ["http://localhost:5000/"]
+    }
+  }
+}
+```
+
+## Step 3: Restart Claude Desktop
+
+After saving the configuration file, completely quit and restart Claude Desktop for the changes to take effect.
+
+## Step 4: Verify the Connection
+
+1. Open Claude Desktop
+2. Start a new conversation
+3. Look for the tool icon (🔧) or check if MCP tools are available
+4. Try using one of the Headless IDE tools:
+
+**Example prompts to test:**
+- "Can you check if the file `SampleProject1/Calculator.cs` exists?"
+- "What tools are available in the shell environment?"
+- "Run `dotnet --version` in the workspace"
+
+If configured correctly, Claude will use the MCP tools from your containerized server.
+
+## Troubleshooting
+
+### Connection Issues
+
+**Problem**: Claude Desktop shows "MCP server failed to start" or similar error.
+
+**Solutions**:
+1. Verify the Docker container is running:
+   ```bash
+   docker ps | grep headless-ide-mcp
+   ```
+
+2. Check the MCP server is accessible:
+   ```bash
+   curl http://localhost:5000/health
+   ```
+
+3. Test the bridge proxy manually:
+   ```bash
+   npx -y mcp-server-and-gw http://localhost:5000/
+   ```
+   This should start the proxy and wait for stdin input. Press `Ctrl+C` to exit.
+
+4. Check Claude Desktop logs (if available in Settings > Developer)
+
+### Port Conflicts
+
+If port 5000 is already in use on your system, you can change the port mapping in `docker-compose.yml`:
+
+```yaml
+ports:
+  - "5100:8080"  # Change 5000 to 5100 or another available port
+```
+
+Then update your Claude Desktop configuration to use the new port:
+```json
+"args": ["http://localhost:5100/"]
+```
+
+### Authentication Issues
+
+If you've enabled API key authentication on the MCP server (see [Authentication Documentation](authentication.md)), you'll need to configure the bridge to pass the API key.
+
+Currently, basic HTTP headers can be added through environment variables. Check the `mcp-server-and-gw` documentation for the latest authentication options.
+
+### Tools Not Appearing
+
+1. Ensure the MCP server is returning the tools list:
+   ```bash
+   curl -X POST http://localhost:5000/ \
+     -H "Content-Type: application/json" \
+     -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+   ```
+
+2. Verify you're using a compatible version of Claude Desktop with MCP support
+
+3. Check that the `mcpServers` configuration is valid JSON (no trailing commas, proper quotes)
+
+## Available Tools
+
+Once connected, the following MCP tools will be available in Claude Desktop:
+
+### File System Tools
+- `check_file_exists`: Check if a file exists in the codebase
+
+### Shell Execution Tools
+- `shell_execute`: Execute CLI commands (dotnet, git, rg, jq, etc.)
+- `shell_execute_json`: Execute commands that return JSON output
+- `shell_get_available_tools`: List available CLI tools in the container
+
+For detailed tool documentation, see the [main README](../README.md#available-mcp-tools).
+
+## Security Considerations
+
+### Network Security
+
+When running the MCP server:
+- The default configuration exposes the server on `localhost:5000`
+- This is accessible to any process on your machine
+- If you need to restrict access, consider:
+  - Using Docker network isolation
+  - Enabling API key authentication (see [Authentication](authentication.md))
+  - Using firewall rules to limit access
+
+### Container Security
+
+The Headless IDE MCP server runs with production-grade security:
+- Non-root user execution
+- Capability dropping
+- Resource limits (CPU and memory)
+- Command allowlist/denylist
+- Path restrictions
+- Comprehensive audit logging
+
+For more details, see the [Security Documentation](security.md).
+
+## Advanced Configuration
+
+### Custom Workspace Path
+
+To analyze a different codebase, modify the volume mount in `docker-compose.yml`:
+
+```yaml
+volumes:
+  - /path/to/your/codebase:/workspace
+```
+
+Then restart the container:
+```bash
+docker-compose down
+docker-compose up --build
+```
+
+### Multiple MCP Servers
+
+You can configure multiple MCP servers in Claude Desktop:
+
+```json
+{
+  "mcpServers": {
+    "headless-ide": {
+      "command": "npx",
+      "args": ["-y", "mcp-server-and-gw", "http://localhost:5000/"]
+    },
+    "another-server": {
+      "command": "npx",
+      "args": ["-y", "some-other-mcp-server"]
+    }
+  }
+}
+```
+
+### Running in Production
+
+For production deployments:
+
+1. Use a proper reverse proxy (nginx, Caddy) with TLS
+2. Enable API key authentication
+3. Set `ASPNETCORE_ENVIRONMENT=Production` in docker-compose.yml
+4. Review the [Security Checklist](security-checklist.md)
+5. Monitor logs as described in the [Operations Guide](operations.md)
+
+## Alternative: Direct HTTP Access
+
+**Note**: Claude Desktop does not currently support direct HTTP/SSE transport natively. The bridge proxy method described above is the recommended approach for connecting Claude Desktop to HTTP-based MCP servers.
+
+If you're building your own MCP client or using a different AI assistant that supports HTTP transport, you can connect directly to `http://localhost:5000/` using JSON-RPC messages. See the [.http test file](../.http/test-mcp-server.http) for examples.
+
+## Related Documentation
+
+- [Getting Started Guide](getting-started.md) - General setup and usage
+- [Authentication](authentication.md) - API key configuration
+- [Security](security.md) - Security features and best practices
+- [Operations](operations.md) - Monitoring and maintenance
+- [Main README](../README.md) - Project overview and tool documentation
+
+## Getting Help
+
+If you encounter issues:
+
+1. Check the [Troubleshooting](#troubleshooting) section above
+2. Review the Docker container logs: `docker-compose logs headless-ide-mcp`
+3. Test the MCP server directly with curl (see examples in the [.http file](../.http/test-mcp-server.http))
+4. Open an issue on the [GitHub repository](https://github.com/dazinator/headless-ide-mcp/issues)
+
+## References
+
+- [Model Context Protocol Specification](https://modelcontextprotocol.io/)
+- [Claude Desktop User Guide](https://docs.anthropic.com/claude/docs)
+- [mcp-server-and-gw Bridge Tool](https://github.com/boilingdata/mcp-server-and-gw)
