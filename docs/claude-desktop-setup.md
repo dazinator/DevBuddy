@@ -57,7 +57,30 @@ The Claude Desktop configuration file location depends on your operating system:
 
 ### Add the MCP Server Configuration
 
-Edit the `claude_desktop_config.json` file and add the following configuration:
+Edit the `claude_desktop_config.json` file and add the following configuration.
+
+#### For Windows
+
+On Windows, you must wrap `npx` with `cmd /c` because `npx` is not a native executable:
+
+```json
+{
+  "mcpServers": {
+    "headless-ide": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "mcp-server-and-gw",
+        "http://localhost:5000/"
+      ]
+    }
+  }
+}
+```
+
+#### For macOS and Linux
 
 ```json
 {
@@ -68,10 +91,7 @@ Edit the `claude_desktop_config.json` file and add the following configuration:
         "-y",
         "mcp-server-and-gw",
         "http://localhost:5000/"
-      ],
-      "env": {
-        "MCP_SERVER_NAME": "headless-ide-mcp"
-      }
+      ]
     }
   }
 }
@@ -79,12 +99,14 @@ Edit the `claude_desktop_config.json` file and add the following configuration:
 
 **Configuration Breakdown:**
 - `headless-ide`: A friendly name for your MCP server (you can choose any name)
-- `command`: Uses `npx` to run the bridge proxy on-the-fly
+- `command`: 
+  - **Windows**: `cmd` with `/c` flag to execute the npx command
+  - **macOS/Linux**: `npx` to run the bridge proxy on-the-fly
 - `args`: 
+  - **Windows**: Starts with `/c`, `npx`
   - `-y`: Auto-confirms package installation
   - `mcp-server-and-gw`: The stdio-to-HTTP bridge package
   - `http://localhost:5000/`: The URL of your MCP server
-- `env`: Optional environment variables
 
 ### Alternative: Using a Pre-installed Bridge
 
@@ -94,8 +116,21 @@ If you prefer to install the bridge proxy globally:
 npm install -g mcp-server-and-gw
 ```
 
-Then configure Claude Desktop to use it directly:
+Then configure Claude Desktop to use it directly.
 
+**For Windows:**
+```json
+{
+  "mcpServers": {
+    "headless-ide": {
+      "command": "cmd",
+      "args": ["/c", "mcp-server-and-gw", "http://localhost:5000/"]
+    }
+  }
+}
+```
+
+**For macOS/Linux:**
 ```json
 {
   "mcpServers": {
@@ -127,6 +162,38 @@ If configured correctly, Claude will use the MCP tools from your containerized s
 
 ## Troubleshooting
 
+### "Cannot read properties of undefined" Error on Windows
+
+**Problem**: On Windows, you see an error like "Cannot read properties of undefined (reading 'cmd')" or "MCP dev_buddy: Cannot read properties of undefined".
+
+**Solution**: This occurs because `npx` is not a native Windows executable. You must use `cmd /c` to run it:
+
+**Incorrect (will fail on Windows):**
+```json
+{
+  "mcpServers": {
+    "dev_buddy": {
+      "command": "npx",
+      "args": ["-y", "mcp-server-and-gw", "http://localhost:5000/"]
+    }
+  }
+}
+```
+
+**Correct (Windows):**
+```json
+{
+  "mcpServers": {
+    "dev_buddy": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "mcp-server-and-gw", "http://localhost:5000/"]
+    }
+  }
+}
+```
+
+The `/c` flag tells `cmd` to execute the command and then terminate. This properly spawns the `npx` process on Windows.
+
 ### Connection Issues
 
 **Problem**: Claude Desktop shows "MCP server failed to start" or similar error.
@@ -143,6 +210,13 @@ If configured correctly, Claude will use the MCP tools from your containerized s
    ```
 
 3. Test the bridge proxy manually:
+   
+   **Windows (PowerShell):**
+   ```powershell
+   npx -y mcp-server-and-gw http://localhost:5000/
+   ```
+   
+   **macOS/Linux:**
    ```bash
    npx -y mcp-server-and-gw http://localhost:5000/
    ```
@@ -159,7 +233,21 @@ ports:
   - "5100:8080"  # Change 5000 to 5100 or another available port
 ```
 
-Then update your Claude Desktop configuration to use the new port:
+Then update your Claude Desktop configuration to use the new port.
+
+**Windows:**
+```json
+{
+  "mcpServers": {
+    "headless-ide": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "mcp-server-and-gw", "http://localhost:5100/"]
+    }
+  }
+}
+```
+
+**macOS/Linux:**
 ```json
 {
   "mcpServers": {
@@ -247,8 +335,25 @@ docker-compose up --build
 
 ### Multiple MCP Servers
 
-You can configure multiple MCP servers in Claude Desktop:
+You can configure multiple MCP servers in Claude Desktop.
 
+**Windows:**
+```json
+{
+  "mcpServers": {
+    "headless-ide": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "mcp-server-and-gw", "http://localhost:5000/"]
+    },
+    "another-server": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "some-other-mcp-server"]
+    }
+  }
+}
+```
+
+**macOS/Linux:**
 ```json
 {
   "mcpServers": {
