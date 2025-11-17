@@ -5,6 +5,16 @@ using ModelContextProtocol.Server;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure Kestrel to listen on both HTTP and HTTPS ports
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.ListenAnyIP(8080); // HTTP
+    serverOptions.ListenAnyIP(8081, listenOptions =>
+    {
+        listenOptions.UseHttps(); // HTTPS - certificate configured via environment variables
+    });
+});
+
 // Get the code base path from environment variable or use default
 var codeBasePath = Environment.GetEnvironmentVariable("CODE_BASE_PATH") ?? "/workspace";
 

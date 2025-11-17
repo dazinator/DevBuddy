@@ -1,11 +1,30 @@
-### Health Check
+### Health Check (HTTP)
 GET http://localhost:5000/health
 Accept: application/json
 
 ###
 
-### List MCP Tools
+### Health Check (HTTPS)
+GET https://localhost:5001/health
+Accept: application/json
+
+###
+
+### List MCP Tools (HTTP)
 POST http://localhost:5000/
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/list"
+}
+
+###
+
+### List MCP Tools (HTTPS)
+POST https://localhost:5001/
 Content-Type: application/json
 Accept: application/json, text/event-stream
 

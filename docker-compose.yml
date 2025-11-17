@@ -15,6 +15,8 @@ services:
       - ASPNETCORE_HTTP_PORTS=8080
       - ASPNETCORE_HTTPS_PORTS=8081
       - CODE_BASE_PATH=/workspace
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=DevCertPassword
     volumes:
       # Mount the sample codebase into the container
       # Note: Read-write mount for development (allows agent to create/modify files)
