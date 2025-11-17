@@ -5,7 +5,7 @@ A Model Context Protocol (MCP) server built with ASP.NET Core that provides tool
 ## Features
 
 - **MCP Server**: ASP.NET Core application using the official [ModelContextProtocol.AspNetCore](https://www.nuget.org/packages/ModelContextProtocol.AspNetCore) SDK
-- **HTTPS Support**: Development certificate automatically generated in container for secure connections
+- **HTTPS Support**: Flexible certificate management with support for local dev certs, persistent container-generated certs, and production certificates
 - **Shell Command Execution**: Execute CLI commands (dotnet, git, ripgrep, jq, etc.) in a sandboxed environment
 - **File System Tools**: Check file existence and analyze project structure
 - **Docker Support**: Full containerization with DevContainer base image including development tools
@@ -26,7 +26,14 @@ docker-compose up --build
 
 The server will be available at:
 - **HTTP**: `http://localhost:5000`
-- **HTTPS**: `https://localhost:5001` (with self-signed development certificate)
+- **HTTPS**: `https://localhost:5001`
+
+The container automatically manages HTTPS certificates with three options:
+1. **Use your local dev cert** (recommended) - mount `~/.aspnet/https` in docker-compose.yml
+2. **Auto-generated cert** (default) - persisted to Docker volume
+3. **Production cert** - mount your own certificate
+
+See [HTTPS Configuration](docs/https-setup.md) for detailed setup instructions.
 
 ### Test the Server
 

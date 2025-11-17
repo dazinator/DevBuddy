@@ -1,32 +1,171 @@
 # HTTPS Configuration
 
-The Headless IDE MCP server supports HTTPS using a development certificate that is automatically generated when the container starts.
+The Headless IDE MCP server supports HTTPS with flexible certificate management options for development and production environments.
 
 ## Overview
 
 The container is configured with:
 - **HTTP** on port 8080 (mapped to host port 5000)
 - **HTTPS** on port 8081 (mapped to host port 5001)
-- A self-signed development certificate generated at container build time
+- Support for **local dev certificates** from your host machine
+- **Automatic certificate persistence** via Docker volumes
+- **Automatic certificate generation** when needed
+
+## Certificate Management Options
+
+You have three options for managing HTTPS certificates:
+
+### Option 1: Use Local Dev Certificate (Recommended for Development)
+
+This option allows you to use the development certificate from your local machine, which is already trusted by your system.
+
+**Benefits:**
+- Certificate is already trusted on your local machine
+- Works seamlessly with Docker Desktop
+- No additional trust setup required
+- Changes to local cert automatically reflected in container
+
+**Setup:**
+
+1. **Generate or verify local dev certificate** on your host machine:
+
+   **Windows:**
+   ```powershell
+   dotnet dev-certs https --trust
+   ```
+
+   **macOS:**
+   ```bash
+   dotnet dev-certs https --trust
+   ```
+
+   **Linux:**
+   ```bash
+   dotnet dev-certs https
+   # Note: --trust is not supported on Linux, manual trust required
+   ```
+
+2. **Find your local certificate location:**
+
+   The default location is typically:
+   - **Windows:** `%APPDATA%\ASP.NET\Https\`
+   - **macOS/Linux:** `~/.aspnet/https/`
+
+   You can verify by running:
+   ```bash
+   # Export to default location
+   dotnet dev-certs https -ep ~/.aspnet/https/aspnetapp.pfx -p DevCertPassword
+   ```
+
+3. **Update docker-compose.yml** to mount your local certificate:
+
+   Uncomment the following line in the `volumes` section:
+   ```yaml
+   volumes:
+     - ./sample-codebase:/workspace
+     - https-certs:/https
+     # Uncomment this line:
+     - ~/.aspnet/https:/https-host:ro
+   ```
+
+   On Windows, use:
+   ```yaml
+     - ${APPDATA}/ASP.NET/Https:/https-host:ro
+   ```
+
+4. **Start the container:**
+   ```bash
+   docker-compose up --build
+   ```
+
+The container will automatically detect and use your local dev certificate.
+
+### Option 2: Container-Generated Certificate with Persistence (Default)
+
+This is the default option when no local certificate is mounted. The container generates its own certificate and persists it to a Docker volume.
+
+**Benefits:**
+- Automatic setup, no manual configuration required
+- Certificate persists across container restarts
+- Easy to export and trust system-wide if needed
+
+**Setup:**
+
+1. **Start the container:**
+   ```bash
+   docker-compose up --build
+   ```
+
+2. The container will:
+   - Generate a new self-signed certificate (if one doesn't exist)
+   - Save it to the `https-certs` Docker volume at `/https/aspnetapp.pfx`
+   - Reuse the same certificate on subsequent container restarts
+
+3. **Access the server:**
+   - **HTTP**: `http://localhost:5000`
+   - **HTTPS**: `https://localhost:5001` (with `--insecure` flag or after trusting cert)
+
+### Option 3: Export and Trust Container Certificate
+
+If you're using a container-generated certificate (Option 2), you can export it and add it to your system's trusted certificates.
+
+**Steps:**
+
+1. **Export the certificate from the container:**
+   ```bash
+   # Create a local directory for the cert
+   mkdir -p ./certs
+   
+   # Copy certificate from the running container
+   docker cp headless-ide-mcp-server:/https/aspnetapp.pfx ./certs/aspnetapp.pfx
+   ```
+
+   Alternatively, copy from the Docker volume:
+   ```bash
+   # On Linux/macOS
+   docker run --rm -v headless-ide-mcp-certs:/https -v $(pwd)/certs:/backup alpine cp /https/aspnetapp.pfx /backup/aspnetapp.pfx
+   
+   # On Windows (PowerShell)
+   docker run --rm -v headless-ide-mcp-certs:/https -v ${PWD}/certs:/backup alpine cp /https/aspnetapp.pfx /backup/aspnetapp.pfx
+   ```
+
+2. **Import the certificate to your system:**
+
+   **Windows:**
+   ```powershell
+   # Import to user's certificate store
+   certutil -user -p DevCertPassword -importpfx certs\aspnetapp.pfx
+   ```
+
+   **macOS:**
+   ```bash
+   # Convert PFX to PEM format
+   openssl pkcs12 -in certs/aspnetapp.pfx -out certs/aspnetapp.pem -nodes -password pass:DevCertPassword
+   
+   # Add to keychain and trust
+   sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain certs/aspnetapp.pem
+   ```
+
+   **Linux (Ubuntu/Debian):**
+   ```bash
+   # Convert PFX to CRT format
+   openssl pkcs12 -in certs/aspnetapp.pfx -clcerts -nokeys -out certs/aspnetapp.crt -password pass:DevCertPassword
+   
+   # Copy to system certificates
+   sudo cp certs/aspnetapp.crt /usr/local/share/ca-certificates/
+   sudo update-ca-certificates
+   ```
+
+3. **Restart your browser or application** to recognize the newly trusted certificate.
 
 ## Using HTTPS
 
-When running the container with docker-compose, HTTPS is automatically configured and available:
-
-```bash
-docker-compose up --build
-```
-
-The server will be available at:
-- **HTTP**: `http://localhost:5000`
-- **HTTPS**: `https://localhost:5001`
-
-## Testing HTTPS Connection
+### Testing HTTPS Connection
 
 You can test the HTTPS endpoint with curl:
 
 ```bash
-# Use --insecure (-k) flag because the certificate is self-signed
+# Use --insecure (-k) flag for untrusted certificates
 curl https://localhost:5001/health --insecure
 ```
 
@@ -35,68 +174,41 @@ Expected response:
 {"status":"healthy","codeBasePath":"/workspace"}
 ```
 
-## Certificate Details
+### With Trusted Certificate
 
-The development certificate is:
-- **Location**: `/https/aspnetapp.pfx` (inside the container)
-- **Password**: `DevCertPassword`
-- **Type**: Self-signed development certificate
-- **Generated**: Automatically during container build using `dotnet dev-certs https`
+Once you've trusted the certificate (using Option 1 or Option 3):
 
-## Trusting the Certificate Locally
-
-Since the certificate is self-signed, browsers and tools will show security warnings. For development purposes, you can:
-
-### Option 1: Use the --insecure Flag (Recommended for Testing)
-
-When using curl or similar tools:
 ```bash
-curl https://localhost:5001/health --insecure
+# No --insecure flag needed
+curl https://localhost:5001/health
 ```
 
-### Option 2: Export and Trust the Certificate (Advanced)
+## Certificate Details
 
-If you need to trust the certificate system-wide:
-
-1. **Export the certificate from the running container:**
-   ```bash
-   docker cp headless-ide-mcp-server:/https/aspnetapp.pfx ./aspnetapp.pfx
-   ```
-
-2. **Import the certificate to your system:**
-
-   **Windows:**
-   ```powershell
-   # Import to user's certificate store
-   certutil -user -p DevCertPassword -importpfx aspnetapp.pfx
-   ```
-
-   **macOS:**
-   ```bash
-   # Convert PFX to PEM format
-   openssl pkcs12 -in aspnetapp.pfx -out aspnetapp.pem -nodes -password pass:DevCertPassword
-   
-   # Add to keychain and trust
-   sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain aspnetapp.pem
-   ```
-
-   **Linux (Ubuntu/Debian):**
-   ```bash
-   # Convert PFX to CRT format
-   openssl pkcs12 -in aspnetapp.pfx -clcerts -nokeys -out aspnetapp.crt -password pass:DevCertPassword
-   
-   # Copy to system certificates
-   sudo cp aspnetapp.crt /usr/local/share/ca-certificates/
-   sudo update-ca-certificates
-   ```
-
-3. **Restart your browser or application** to recognize the newly trusted certificate.
-
-**⚠️ Security Note**: Only trust development certificates on development machines. Never use development certificates in production environments.
+The development certificate uses:
+- **Location (in container)**: `/https/aspnetapp.pfx`
+- **Volume**: `headless-ide-mcp-certs` (persisted across container restarts)
+- **Password**: `DevCertPassword` (can be changed via environment variable)
+- **Type**: Self-signed development certificate
+- **Generated by**: `dotnet dev-certs https` command
 
 ## Using with Claude Desktop
 
-Claude Desktop's remote connector requires HTTPS. With this configuration, you can now use:
+Claude Desktop's remote connector requires HTTPS. Configuration depends on your certificate setup:
+
+### With Trusted Certificate (Option 1 or 3)
+
+```json
+{
+  "mcpServers": {
+    "headless-ide": {
+      "url": "https://localhost:5001/"
+    }
+  }
+}
+```
+
+### With Untrusted Certificate (Option 2, not exported)
 
 ```json
 {
@@ -115,19 +227,77 @@ Claude Desktop's remote connector requires HTTPS. With this configuration, you c
 
 For production deployments, you should:
 
-1. **Replace the development certificate** with a proper certificate from a Certificate Authority (CA)
-2. **Use environment variables** to configure the certificate path and password:
-   ```yaml
-   environment:
-     - ASPNETCORE_Kestrel__Certificates__Default__Path=/path/to/your/cert.pfx
-     - ASPNETCORE_Kestrel__Certificates__Default__Password=YourSecurePassword
-   ```
-3. **Mount the certificate** as a volume:
+1. **Use a proper certificate from a Certificate Authority (CA)** instead of a development certificate
+
+2. **Mount the production certificate** into the container:
    ```yaml
    volumes:
-     - /path/to/certs:/https:ro
+     - /path/to/production/certs:/https:ro
    ```
-4. **Use secrets management** for the certificate password instead of environment variables
+
+3. **Configure the certificate via environment variables:**
+   ```yaml
+   environment:
+     - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/production-cert.pfx
+     - ASPNETCORE_Kestrel__Certificates__Default__Password=${CERT_PASSWORD}
+   ```
+
+4. **Use secrets management** for the certificate password:
+   - Docker Secrets
+   - Kubernetes Secrets
+   - Azure Key Vault
+   - AWS Secrets Manager
+   - HashiCorp Vault
+
+5. **Set certificate as read-only** in the volume mount (`:ro` flag)
+
+## Managing the Certificate Volume
+
+### View Certificate Volume Information
+
+```bash
+# List Docker volumes
+docker volume ls | grep headless-ide-mcp-certs
+
+# Inspect the volume
+docker volume inspect headless-ide-mcp-certs
+```
+
+### Backup Certificate from Volume
+
+```bash
+# Create a backup directory
+mkdir -p ./cert-backup
+
+# Copy certificate from volume to host
+docker run --rm -v headless-ide-mcp-certs:/https -v $(pwd)/cert-backup:/backup alpine cp /https/aspnetapp.pfx /backup/aspnetapp.pfx
+```
+
+### Reset Certificate (Generate New One)
+
+If you need to generate a new certificate:
+
+```bash
+# Stop the container
+docker-compose down
+
+# Remove the volume
+docker volume rm headless-ide-mcp-certs
+
+# Start the container (will generate new cert)
+docker-compose up --build
+```
+
+### Use Different Certificate Password
+
+You can customize the certificate password by setting an environment variable:
+
+```yaml
+environment:
+  - ASPNETCORE_Kestrel__Certificates__Default__Password=YourCustomPassword
+```
+
+**Important:** If you change the password, you must regenerate the certificate (see "Reset Certificate" above).
 
 ## Troubleshooting
 
@@ -135,19 +305,28 @@ For production deployments, you should:
 
 If you see an error about the certificate not being found:
 
-1. **Verify the certificate was generated:**
+1. **Verify the certificate exists in the volume:**
    ```bash
-   docker exec headless-ide-mcp-server ls -la /https/
+   docker run --rm -v headless-ide-mcp-certs:/https alpine ls -la /https/
    ```
    You should see `aspnetapp.pfx`
 
-2. **Check the logs:**
+2. **Check if local cert mount is correct** (if using Option 1):
+   ```bash
+   # Verify local cert exists
+   ls -la ~/.aspnet/https/aspnetapp.pfx
+   
+   # Check container can access it
+   docker exec headless-ide-mcp-server ls -la /https-host/aspnetapp.pfx
+   ```
+
+3. **Check the container logs:**
    ```bash
    docker-compose logs headless-ide-mcp
    ```
-   Look for messages about certificate generation
+   Look for certificate setup messages
 
-3. **Rebuild the container:**
+4. **Rebuild the container:**
    ```bash
    docker-compose down
    docker-compose up --build
@@ -171,23 +350,73 @@ If you see an error about the certificate not being found:
    docker-compose logs -f headless-ide-mcp
    ```
 
+### Certificate Permission Issues
+
+If you encounter permission errors:
+
+1. **Check certificate file permissions in the container:**
+   ```bash
+   docker exec headless-ide-mcp-server ls -la /https/aspnetapp.pfx
+   ```
+   Should show: `-rw-r--r-- 1 vscode vscode`
+
+2. **For local cert mount**, ensure the host certificate is readable:
+   ```bash
+   chmod 644 ~/.aspnet/https/aspnetapp.pfx
+   ```
+
 ### Browser Security Warnings
 
-This is expected with self-signed certificates. Options:
-- Use the `--insecure` flag with curl/tools
-- Trust the certificate locally (see above)
-- Use a proper CA-signed certificate for production
+This is expected with self-signed certificates. Solutions:
+- **Option 1**: Use the `--insecure` flag with curl/tools
+- **Option 2**: Use your local dev cert (already trusted)
+- **Option 3**: Export and trust the container cert (see above)
+- **Production**: Use a proper CA-signed certificate
+
+### Local Cert Not Being Used
+
+If the container is generating a new cert instead of using your local one:
+
+1. **Verify the docker-compose.yml volume mount** is uncommented:
+   ```yaml
+   - ~/.aspnet/https:/https-host:ro
+   ```
+
+2. **Check the local certificate exists:**
+   ```bash
+   ls -la ~/.aspnet/https/aspnetapp.pfx
+   ```
+
+3. **Regenerate local cert if needed:**
+   ```bash
+   dotnet dev-certs https -ep ~/.aspnet/https/aspnetapp.pfx -p DevCertPassword --trust
+   ```
+
+4. **Restart the container:**
+   ```bash
+   docker-compose restart
+   ```
 
 ## Technical Details
 
+### Certificate Priority Order
+
+The container checks for certificates in this order:
+
+1. **Local dev cert from host** (if `/https-host/aspnetapp.pfx` exists)
+2. **Existing cert in volume** (if `/https/aspnetapp.pfx` exists from previous run)
+3. **Generate new cert** (if neither exists)
+
 ### Certificate Generation
 
-The certificate is generated using the `dotnet dev-certs https` command in the Dockerfile:
+When generating a new certificate, the container uses:
 
 ```bash
 dotnet dev-certs https --clean
 dotnet dev-certs https -ep /https/aspnetapp.pfx -p DevCertPassword --trust
 ```
+
+The `--trust` flag attempts to add the certificate to the trusted store, but this only works when run on the host machine, not in a container.
 
 ### Kestrel Configuration
 
@@ -205,8 +434,39 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
 ```
 
 The certificate path and password are configured via environment variables:
-- `ASPNETCORE_Kestrel__Certificates__Default__Path`
-- `ASPNETCORE_Kestrel__Certificates__Default__Password`
+- `ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx`
+- `ASPNETCORE_Kestrel__Certificates__Default__Password=DevCertPassword`
+
+### Docker Volume Details
+
+The `https-certs` volume is a named Docker volume that persists data independently of container lifecycle:
+
+```yaml
+volumes:
+  https-certs:
+    name: headless-ide-mcp-certs
+```
+
+This ensures the certificate is preserved even when:
+- The container is stopped and removed
+- The container is rebuilt with new code
+- Docker Compose is restarted
+
+## Security Best Practices
+
+**Development:**
+- ✅ Use local dev certs (Option 1) for seamless development
+- ✅ Keep certificate passwords in environment variables
+- ✅ Use `--insecure` flag for testing instead of disabling certificate validation globally
+
+**Production:**
+- ❌ Never use development certificates in production
+- ✅ Use certificates from a trusted Certificate Authority
+- ✅ Store certificate passwords in secure secrets management systems
+- ✅ Mount production certificates as read-only (`:ro`)
+- ✅ Regularly rotate certificates before expiration
+- ✅ Use strong, unique passwords for certificate files
+- ✅ Restrict access to certificate files and volumes
 
 ## Related Documentation
 
