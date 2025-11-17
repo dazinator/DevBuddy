@@ -85,6 +85,7 @@ For detailed security information, see:
 ## Documentation
 
 - **[Getting Started Guide](docs/getting-started.md)** - Learn how to run and use the MCP server
+- **[Claude Desktop Setup](docs/claude-desktop-setup.md)** - Connect Claude Desktop to the containerized MCP server
 - **[Project Setup](docs/project-setup.md)** - Understand the architecture and how to add new tools
 - **[Operations Guide](docs/operations.md)** - Monitoring, logging, and maintenance procedures
 
