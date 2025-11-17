@@ -161,7 +161,14 @@ ports:
 
 Then update your Claude Desktop configuration to use the new port:
 ```json
-"args": ["http://localhost:5100/"]
+{
+  "mcpServers": {
+    "headless-ide": {
+      "command": "npx",
+      "args": ["-y", "mcp-server-and-gw", "http://localhost:5100/"]
+    }
+  }
+}
 ```
 
 ### Authentication Issues
