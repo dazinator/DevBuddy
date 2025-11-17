@@ -5,6 +5,7 @@ A Model Context Protocol (MCP) server built with ASP.NET Core that provides tool
 ## Features
 
 - **MCP Server**: ASP.NET Core application using the official [ModelContextProtocol.AspNetCore](https://www.nuget.org/packages/ModelContextProtocol.AspNetCore) SDK
+- **HTTPS Support**: Development certificate automatically generated in container for secure connections
 - **Shell Command Execution**: Execute CLI commands (dotnet, git, ripgrep, jq, etc.) in a sandboxed environment
 - **File System Tools**: Check file existence and analyze project structure
 - **Docker Support**: Full containerization with DevContainer base image including development tools
@@ -23,15 +24,20 @@ A Model Context Protocol (MCP) server built with ASP.NET Core that provides tool
 docker-compose up --build
 ```
 
-The server will be available at `http://localhost:5000`
+The server will be available at:
+- **HTTP**: `http://localhost:5000`
+- **HTTPS**: `https://localhost:5001` (with self-signed development certificate)
 
 ### Test the Server
 
 Use the provided `.http/test-mcp-server.http` file with your HTTP client:
 
 ```http
-### Health Check
+### Health Check (HTTP)
 GET http://localhost:5000/health
+
+### Health Check (HTTPS)
+GET https://localhost:5001/health
 
 ### List Available Tools
 POST http://localhost:5000/
@@ -85,6 +91,7 @@ For detailed security information, see:
 ## Documentation
 
 - **[Getting Started Guide](docs/getting-started.md)** - Learn how to run and use the MCP server
+- **[HTTPS Configuration](docs/https-setup.md)** - Configure HTTPS and development certificates
 - **[Claude Desktop Setup](docs/claude-desktop-setup.md)** - Connect Claude Desktop to the containerized MCP server
 - **[Project Setup](docs/project-setup.md)** - Understand the architecture and how to add new tools
 - **[Operations Guide](docs/operations.md)** - Monitoring, logging, and maintenance procedures

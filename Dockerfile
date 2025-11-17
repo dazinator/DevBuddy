@@ -10,6 +10,9 @@ RUN apt-get update && apt-get install -y \
     ripgrep \
     && rm -rf /var/lib/apt/lists/*
 
+# Create directory for HTTPS certificate
+RUN mkdir -p /https && chown vscode:vscode /https
+
 # Verify tool installations
 RUN echo "=== Verifying CLI Tool Installations ===" && \
     echo "dotnet: $(dotnet --version)" && \
@@ -29,6 +32,8 @@ RUN mkdir -p /workspace && chown vscode:vscode /workspace
 ENV CODE_BASE_PATH=/workspace
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
 ENV ASPNETCORE_ENVIRONMENT=Production
+ENV ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+ENV ASPNETCORE_Kestrel__Certificates__Default__Password=DevCertPassword
 
 # Expose ports
 EXPOSE 8080
@@ -67,8 +72,15 @@ WORKDIR /app
 # Copy published application with correct ownership
 COPY --from=publish --chown=vscode:vscode /app/publish .
 
+# Copy certificate generation script
+COPY --chown=vscode:vscode generate-dev-cert.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/generate-dev-cert.sh
+
 # Switch to non-root user (vscode user from DevContainer)
 USER vscode
+
+# Generate development certificate
+RUN /usr/local/bin/generate-dev-cert.sh
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

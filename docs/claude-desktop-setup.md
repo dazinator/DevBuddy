@@ -4,37 +4,24 @@ This guide explains how to configure Claude Desktop to connect to the Headless I
 
 ## Overview
 
-The Headless IDE MCP server uses **HTTP transport** and runs as a containerized service. Claude Desktop provides two ways to connect:
+The Headless IDE MCP server supports both **HTTP** and **HTTPS** transport and runs as a containerized service. Claude Desktop provides two ways to connect:
 
-1. **✅ Recommended: Remote MCP Connector** (Beta) - Direct HTTP connection using Claude's native remote connector feature
+1. **✅ Recommended: Remote MCP Connector** (Beta) - Direct HTTPS connection using Claude's native remote connector feature
 2. **Alternative: stdio Bridge Proxy** - Uses a bridge tool to convert between stdio and HTTP
 
 ## Method 1: Remote MCP Connector (Recommended)
 
-**⚠️ IMPORTANT LIMITATION**: Claude Desktop's remote connector currently **requires HTTPS** for security. The default container configuration only supports HTTP, which means this method won't work out of the box.
+**✅ HTTPS is now supported!** The container automatically generates a development certificate and is ready for HTTPS connections.
 
-**Status:** This method is recommended for its simplicity, but requires HTTPS support to be added to the container first. See [Issue #TBD] for HTTPS support progress.
-
-**Claude Desktop supports direct HTTPS connections to remote MCP servers** through its "Custom Connectors" feature (currently in Beta). Once HTTPS is configured, this is the simplest approach.
+**Claude Desktop supports direct HTTPS connections to remote MCP servers** through its "Custom Connectors" feature (currently in Beta). This is the simplest approach.
 
 ### Prerequisites
 
 - Claude Desktop installed ([download here](https://claude.ai/download))
 - Docker Desktop running
-- **Headless IDE MCP server with HTTPS enabled** (⚠️ not yet implemented - see limitation above)
+- Headless IDE MCP server running with HTTPS enabled (configured by default)
 
-### Current Limitation
-
-The remote connector will show the error: **"URL must start with 'https'"** when trying to use `http://localhost:5000/`.
-
-To use this method, the container needs to be configured with:
-- HTTPS certificate (development or production)
-- HTTPS port exposed and configured
-- Proper certificate mounting in Docker
-
-**For now, use [Method 2: stdio Bridge Proxy](#method-2-stdio-bridge-proxy-alternative)** which doesn't have this HTTPS requirement.
-
-### Step 1: Start the Headless IDE MCP Server (When HTTPS is Available)
+### Step 1: Start the Headless IDE MCP Server
 
 Ensure the MCP server is running with Docker Compose:
 
@@ -42,7 +29,7 @@ Ensure the MCP server is running with Docker Compose:
 docker-compose up --build
 ```
 
-The server will be available at `https://localhost:5001` (when HTTPS is configured)
+The server will be available at `https://localhost:5001`
 
 Verify it's running:
 ```bash
@@ -54,7 +41,9 @@ You should see:
 {"status":"healthy","codeBasePath":"/workspace"}
 ```
 
-### Step 2: Add Remote Connector in Claude Desktop (When HTTPS is Available)
+**Note**: The `--insecure` flag is needed because the certificate is self-signed. See the [HTTPS Configuration guide](https-setup.md) for details on trusting the certificate locally.
+
+### Step 2: Add Remote Connector in Claude Desktop
 
 1. Open Claude Desktop
 2. Go to **Settings** → **Developer** (or **Integrations**)
@@ -66,7 +55,7 @@ You should see:
 
 Claude Desktop will connect directly to your HTTPS MCP server - no bridge needed!
 
-### Step 3: Verify the Connection (When HTTPS is Available)
+### Step 3: Verify the Connection
 
 1. Start a new conversation in Claude Desktop
 2. Look for the tool icon (🔧) or check if MCP tools are available
@@ -77,22 +66,20 @@ Claude Desktop will connect directly to your HTTPS MCP server - no bridge needed
 
 **That's it!** The remote connector handles the HTTPS communication natively.
 
-**Benefits of this method (when HTTPS is available):**
+**Benefits of this method:**
 - ✅ No bridge proxy needed
 - ✅ No Node.js installation required
 - ✅ Direct HTTPS connection
 - ✅ Simpler configuration
 - ✅ Native Claude Desktop feature
 
+**Note**: If you encounter certificate trust issues, see the [HTTPS Configuration guide](https-setup.md) for instructions on trusting the development certificate.
+
 ---
 
-## Method 2: stdio Bridge Proxy (Currently Recommended)
+## Method 2: stdio Bridge Proxy (Alternative)
 
-**✅ Use this method** - It's currently the only working option since:
-- The container doesn't support HTTPS yet (required for Method 1)
-- The bridge connects to HTTP locally, bypassing Claude's HTTPS requirement
-
-**Note**: There are known protocol compatibility issues between some stdio-to-HTTP bridges and the ASP.NET Core MCP implementation. If the bridge doesn't work, HTTPS support needs to be added to use Method 1.
+**Note**: With HTTPS now supported, Method 1 is recommended. Use this method if you prefer the stdio bridge approach or need HTTP-only connectivity.
 
 ### Architecture
 
@@ -296,19 +283,14 @@ If configured correctly, Claude will use the MCP tools from your containerized s
 
 **Problem**: When adding a remote connector, Claude Desktop shows: **"URL must start with 'https'"**
 
-**Cause**: Claude Desktop's remote connector requires HTTPS for security. The current container only supports HTTP.
+**Solution**: Ensure you're using the HTTPS URL (`https://localhost:5001/`) instead of HTTP (`http://localhost:5000/`). The container now supports HTTPS by default with an automatically generated development certificate.
 
-**Solution**: 
+If you're already using HTTPS and still see this error:
+1. Verify the container is running: `docker ps`
+2. Test the HTTPS endpoint: `curl https://localhost:5001/health --insecure`
+3. Restart both the Docker container and Claude Desktop
 
-**Short-term**: Use [Method 2 (stdio Bridge Proxy)](#method-2-stdio-bridge-proxy-currently-recommended) which doesn't require HTTPS.
-
-**Long-term**: The container needs HTTPS support added. This requires:
-1. Development certificate generated and configured
-2. Certificate mounted in Docker container
-3. HTTPS port exposed (5001)
-4. Program.cs configured for HTTPS URLs
-
-Track progress on adding HTTPS support in the repository issues.
+For certificate-related issues, see the [HTTPS Configuration guide](https-setup.md).
 
 ### "npx is not recognized" Error on Windows
 
