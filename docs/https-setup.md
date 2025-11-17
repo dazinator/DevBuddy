@@ -111,42 +111,20 @@ If you're using a container-generated certificate (Option 2), you can export it 
 
 **Steps:**
 
-1. **Export the certificate from the container:**
-   ```bash
+1. **Windows Powershell:**
+   ```powershell
    # Create a local directory for the cert
-   mkdir -p ./certs
+   mkdir -p certs
    
    # Copy certificate from the running container
    docker cp headless-ide-mcp-server:/https/aspnetapp.pfx ./certs/aspnetapp.pfx
-   ```
-
-   Alternatively, copy from the Docker volume:
-   ```bash
-   # On Linux/macOS
-   docker run --rm -v headless-ide-mcp-certs:/https -v $(pwd)/certs:/backup alpine cp /https/aspnetapp.pfx /backup/aspnetapp.pfx
    
-   # On Windows (PowerShell)
-   docker run --rm -v headless-ide-mcp-certs:/https -v ${PWD}/certs:/backup alpine cp /https/aspnetapp.pfx /backup/aspnetapp.pfx
-   ```
-
-2. **Import the certificate to your system:**
-
-   **Windows:**
-   ```powershell
-   # Import to user's certificate store
+   # Add the generated cert to your trusted store (Windows example)
    certutil -user -p DevCertPassword -importpfx certs\aspnetapp.pfx
-   ```
+   ```   
 
-   **macOS:**
-   ```bash
-   # Convert PFX to PEM format
-   openssl pkcs12 -in certs/aspnetapp.pfx -out certs/aspnetapp.pem -nodes -password pass:DevCertPassword
-   
-   # Add to keychain and trust
-   sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain certs/aspnetapp.pem
-   ```
-
-   **Linux (Ubuntu/Debian):**
+2. **Linux:**   
+  
    ```bash
    # Convert PFX to CRT format
    openssl pkcs12 -in certs/aspnetapp.pfx -clcerts -nokeys -out certs/aspnetapp.crt -password pass:DevCertPassword

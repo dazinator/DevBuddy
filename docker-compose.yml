@@ -26,7 +26,7 @@ services:
       - https-certs:/https
       # Optional: Mount local dev cert from host machine
       # Uncomment to use your local machine's dev cert instead of container-generated cert
-      # - ~/.aspnet/https:/https-host:ro
+      - ~/.aspnet/https:/https-host:ro
     networks:
       - mcp-network
     # Security options
