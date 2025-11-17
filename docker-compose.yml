@@ -17,6 +17,10 @@ services:
       - CODE_BASE_PATH=/workspace
       - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
       - ASPNETCORE_Kestrel__Certificates__Default__Password=DevCertPassword
+      # Git authentication (optional - use .env file or set these manually)
+      - GIT_USERNAME=${GIT_USERNAME:-}
+      - GITHUB_PAT=${GITHUB_PAT:-}
+      - AZDO_PAT=${AZDO_PAT:-}
     volumes:
       # Mount the sample codebase into the container
       # Note: Read-write mount for development (allows agent to create/modify files)
