@@ -72,18 +72,15 @@ WORKDIR /app
 # Copy published application with correct ownership
 COPY --from=publish --chown=vscode:vscode /app/publish .
 
-# Copy certificate generation script
-COPY --chown=vscode:vscode generate-dev-cert.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/generate-dev-cert.sh
+# Copy entrypoint script that handles certificate setup at runtime
+COPY --chown=vscode:vscode docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Switch to non-root user (vscode user from DevContainer)
 USER vscode
-
-# Generate development certificate
-RUN /usr/local/bin/generate-dev-cert.sh
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 
-ENTRYPOINT ["dotnet", "HeadlessIdeMcp.Server.dll"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

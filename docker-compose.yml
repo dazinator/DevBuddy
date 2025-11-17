@@ -22,6 +22,11 @@ services:
       # Note: Read-write mount for development (allows agent to create/modify files)
       # For production, use :ro flag for read-only security
       - ./sample-codebase:/workspace
+      # Volume for persisting HTTPS certificate across container restarts
+      - https-certs:/https
+      # Optional: Mount local dev cert from host machine
+      # Uncomment to use your local machine's dev cert instead of container-generated cert
+      # - ~/.aspnet/https:/https-host:ro
     networks:
       - mcp-network
     # Security options
@@ -48,3 +53,7 @@ services:
 networks:
   mcp-network:
     driver: bridge
+
+volumes:
+  https-certs:
+    name: headless-ide-mcp-certs
