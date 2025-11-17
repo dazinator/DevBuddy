@@ -4,9 +4,82 @@ This guide explains how to configure Claude Desktop to connect to the Headless I
 
 ## Overview
 
-The Headless IDE MCP server uses **HTTP transport** and runs as a containerized service. Claude Desktop, however, natively supports **stdio transport** (communicating with local processes via standard input/output). To bridge this gap, you'll need to use a proxy tool that converts stdio messages to HTTP requests.
+The Headless IDE MCP server uses **HTTP transport** and runs as a containerized service. Claude Desktop provides two ways to connect:
 
-## Architecture
+1. **✅ Recommended: Remote MCP Connector** (Beta) - Direct HTTP connection using Claude's native remote connector feature
+2. **Alternative: stdio Bridge Proxy** - Uses a bridge tool to convert between stdio and HTTP
+
+## Method 1: Remote MCP Connector (Recommended)
+
+**Claude Desktop now supports direct HTTP connections to remote MCP servers** through its "Custom Connectors" feature (currently in Beta). This is the simplest and most direct approach.
+
+### Prerequisites
+
+- Claude Desktop installed ([download here](https://claude.ai/download))
+- Docker Desktop running
+- Headless IDE MCP server running in Docker
+
+### Step 1: Start the Headless IDE MCP Server
+
+Ensure the MCP server is running with Docker Compose:
+
+```bash
+docker-compose up --build
+```
+
+The server will be available at `http://localhost:5000`
+
+Verify it's running:
+```bash
+curl http://localhost:5000/health
+```
+
+You should see:
+```json
+{"status":"healthy","codeBasePath":"/workspace"}
+```
+
+### Step 2: Add Remote Connector in Claude Desktop
+
+1. Open Claude Desktop
+2. Go to **Settings** → **Developer** (or **Integrations**)
+3. Click **"Add custom connector"** or **"Add MCP Server"**
+4. In the dialog:
+   - **Name**: `Headless IDE` (or any name you prefer)
+   - **Remote MCP server URL**: `http://localhost:5000/`
+5. Click **"Add"**
+
+Claude Desktop will connect directly to your HTTP MCP server - no bridge needed!
+
+### Step 3: Verify the Connection
+
+1. Start a new conversation in Claude Desktop
+2. Look for the tool icon (🔧) or check if MCP tools are available
+3. Try using one of the Headless IDE tools:
+   - "Can you check if the file `SampleProject1/Calculator.cs` exists?"
+   - "What tools are available in the shell environment?"
+   - "Run `dotnet --version` in the workspace"
+
+**That's it!** The remote connector handles the HTTP communication natively.
+
+**Benefits of this method:**
+- ✅ No bridge proxy needed
+- ✅ No Node.js installation required
+- ✅ Direct HTTP connection
+- ✅ Simpler configuration
+- ✅ Native Claude Desktop feature
+
+---
+
+## Method 2: stdio Bridge Proxy (Alternative)
+
+**Use this method if:**
+- Your Claude Desktop version doesn't have the remote connector feature yet
+- You need stdio-based communication for specific requirements
+
+If you're using an older version of Claude Desktop that doesn't have the remote connector feature, you can use a bridge proxy instead.
+
+### Architecture
 
 ```
 Claude Desktop (stdio) 
@@ -16,17 +89,17 @@ mcp-server-and-gw (bridge proxy)
 Headless IDE MCP Server (HTTP) in Docker Container
 ```
 
-## Prerequisites
+### Prerequisites
 
 - **Claude Desktop** installed ([download here](https://claude.ai/download))
 - **Docker Desktop** running
-- **Node.js (v18 or later)** and **npm** installed - Required for the `npx` command that runs the bridge proxy
+- **Node.js (v18 or later)** and **npm** installed - Required for the bridge proxy
   - Download from [nodejs.org](https://nodejs.org/)
   - **Windows users**: After installation, restart your terminal/command prompt
   - Verify installation by running: `node -v` and `npm -v`
 - **Headless IDE MCP server** running in Docker
 
-## Step 1: Start the Headless IDE MCP Server
+### Step 1: Start the Headless IDE MCP Server
 
 First, ensure the MCP server is running with Docker Compose:
 
@@ -46,7 +119,7 @@ You should see:
 {"status":"healthy","codeBasePath":"/workspace"}
 ```
 
-## Step 2: Configure Claude Desktop
+### Step 2: Configure Claude Desktop
 
 **Before proceeding**: Verify that Node.js and npx are installed by running:
 - **Windows (PowerShell)**: `node -v; npm -v; npx -v`
@@ -54,7 +127,7 @@ You should see:
 
 If any command is not found, install Node.js from [nodejs.org](https://nodejs.org/) first. See the [Troubleshooting section](#npx-is-not-recognized-error-on-windows) if needed.
 
-### Locate the Configuration File
+#### Locate the Configuration File
 
 The Claude Desktop configuration file location depends on your operating system:
 
@@ -64,7 +137,7 @@ The Claude Desktop configuration file location depends on your operating system:
 
 **Tip**: You can also access this file via Claude Desktop's menu: `Settings > Developer > Edit Config`
 
-### Add the MCP Server Configuration
+#### Add the MCP Server Configuration
 
 Edit the `claude_desktop_config.json` file and add the following configuration.
 
@@ -151,11 +224,11 @@ Then configure Claude Desktop to use it directly.
 }
 ```
 
-## Step 3: Restart Claude Desktop
+### Step 3: Restart Claude Desktop
 
 After saving the configuration file, completely quit and restart Claude Desktop for the changes to take effect.
 
-## Step 4: Verify the Connection
+### Step 4: Verify the Connection
 
 1. Open Claude Desktop
 2. Start a new conversation
@@ -169,9 +242,42 @@ After saving the configuration file, completely quit and restart Claude Desktop 
 
 If configured correctly, Claude will use the MCP tools from your containerized server.
 
+---
+
 ## Troubleshooting
 
+### Remote Connector Not Available
+
+**Problem**: You don't see the "Add custom connector" or "Remote MCP server URL" option in Claude Desktop settings.
+
+**Solution**: This feature is currently in Beta and may not be available in all versions or regions. If you don't have access:
+- Update to the latest version of Claude Desktop
+- Use [Method 2: stdio Bridge Proxy](#method-2-stdio-bridge-proxy-alternative) as an alternative
+
+### Connection Failed with Remote Connector
+
+**Problem**: After adding the remote connector, Claude Desktop shows connection errors.
+
+**Solutions**:
+1. **Verify the container is running**:
+   ```bash
+   docker ps
+   ```
+   Look for `headless-ide-mcp-server`.
+
+2. **Test the health endpoint**:
+   ```bash
+   curl http://localhost:5000/health
+   ```
+   Should return: `{"status":"healthy","codeBasePath":"/workspace"}`
+
+3. **Check the URL format** - must end with `/`: `http://localhost:5000/`
+
+4. **Restart both** the Docker container and Claude Desktop
+
 ### "npx is not recognized" Error on Windows
+
+**Note**: This only applies to Method 2 (stdio Bridge Proxy).
 
 **Problem**: When trying to run `npx` commands, you see "'npx' is not recognized as an internal or external command" or Claude Desktop shows "Server disconnected" errors.
 
