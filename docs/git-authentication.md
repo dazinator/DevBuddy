@@ -78,14 +78,41 @@ export AZDO_PAT=your_azdo_token
 docker-compose up
 ```
 
+### Alternative: Mount Pre-configured Credentials File
+
+If you already have a git credentials file on your host machine, you can mount it directly into the container instead of using environment variables:
+
+1. Ensure your credentials file exists at `~/.git-credentials` on your host machine with entries like:
+   ```
+   https://username:token@github.com
+   https://username:token@dev.azure.com
+   ```
+
+2. Uncomment the volume mount in `docker-compose.yml`:
+   ```yaml
+   volumes:
+     - ~/.git-credentials:/home/vscode/.git-credentials:ro
+   ```
+
+3. Start the container:
+   ```bash
+   docker-compose up --build
+   ```
+
+**Note:** When a credentials file is mounted, the entrypoint script detects it and skips configuration from environment variables, preserving your existing credentials.
+
 ## How Credentials Are Stored
 
 The container uses git's credential helper to store credentials securely:
 
 1. **In-Memory Store**: Credentials are stored in the container's file system at `/home/vscode/.git-credentials`
 2. **Automatic Cleanup**: Credentials are removed when the container is destroyed
-3. **Not Persisted**: Credentials are NOT persisted in Docker volumes or images
+3. **Not Persisted**: Credentials are NOT persisted in Docker volumes or images (unless explicitly mounted)
 4. **Format**: Credentials are stored in git's standard format: `https://username:token@hostname`
+
+**Two Configuration Methods:**
+- **Environment Variables** (default): Credentials generated from `GITHUB_PAT` and `AZDO_PAT` at startup
+- **Mounted File** (alternative): Pre-existing credentials file mounted from host machine
 
 ## Verification
 

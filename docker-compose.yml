@@ -31,6 +31,9 @@ services:
       # Optional: Mount local dev cert from host machine
       # Uncomment to use your local machine's dev cert instead of container-generated cert
       - ~/.aspnet/https:/https-host:ro
+      # Optional: Mount git credentials file directly (alternative to environment variables)
+      # Uncomment to use a pre-configured git credentials file instead of GITHUB_PAT/AZDO_PAT
+      # - ~/.git-credentials:/home/vscode/.git-credentials:ro
     networks:
       - mcp-network
     # Security options

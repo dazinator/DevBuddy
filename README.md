@@ -40,12 +40,18 @@ See [HTTPS Configuration](docs/https-setup.md) for detailed setup instructions.
 
 To enable git operations with remote repositories (GitHub, Azure DevOps):
 
+**Option 1: Environment Variables**
 1. Copy `.env.example` to `.env`
 2. Add your Personal Access Tokens (PATs):
    ```bash
    GITHUB_PAT=ghp_your_token_here
    AZDO_PAT=your_azdo_token_here
    ```
+3. Run `docker-compose up --build`
+
+**Option 2: Mount Credentials File**
+1. Uncomment the git credentials volume mount in `docker-compose.yml`
+2. Ensure `~/.git-credentials` exists on your host with your tokens
 3. Run `docker-compose up --build`
 
 See [Git Authentication](docs/git-authentication.md) for detailed setup and security information.

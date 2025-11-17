@@ -52,34 +52,47 @@ echo "=== Git Authentication Setup ==="
 # Set git credential helper to use store (credentials stored in ~/.git-credentials)
 git config --global credential.helper store
 
-# Determine the git username (use environment variable or default to current user)
-GIT_USER="${GIT_USERNAME:-$(whoami)}"
-echo "Git username: $GIT_USER"
-
-# Configure GitHub credentials if GITHUB_PAT is provided
-if [ -n "$GITHUB_PAT" ]; then
-    echo "✓ GitHub PAT detected - configuring credentials"
-    # Store credentials for github.com
-    echo "https://${GIT_USER}:${GITHUB_PAT}@github.com" >> ~/.git-credentials
-    echo "  ✓ GitHub credentials configured"
-else
-    echo "○ No GITHUB_PAT provided - GitHub authentication not configured"
-fi
-
-# Configure Azure DevOps credentials if AZDO_PAT is provided
-if [ -n "$AZDO_PAT" ]; then
-    echo "✓ Azure DevOps PAT detected - configuring credentials"
-    # Store credentials for dev.azure.com
-    echo "https://${GIT_USER}:${AZDO_PAT}@dev.azure.com" >> ~/.git-credentials
-    echo "  ✓ Azure DevOps credentials configured"
-else
-    echo "○ No AZDO_PAT provided - Azure DevOps authentication not configured"
-fi
-
-# Set secure permissions on credentials file if it exists
-if [ -f ~/.git-credentials ]; then
+# Check if git credentials file is already mounted/present
+if [ -f ~/.git-credentials ] && [ -s ~/.git-credentials ]; then
+    echo "✓ Existing git credentials file detected"
+    echo "  Skipping credential configuration from environment variables"
+    echo "  Using pre-configured credentials from mounted file"
     chmod 600 ~/.git-credentials
-    echo "  ℹ Git credentials configured and secured"
+    echo "  ℹ Git credentials file secured with 600 permissions"
+else
+    # No existing credentials file, configure from environment variables
+    echo "○ No existing credentials file found"
+    echo "  Configuring credentials from environment variables"
+    
+    # Determine the git username (use environment variable or default to current user)
+    GIT_USER="${GIT_USERNAME:-$(whoami)}"
+    echo "  Git username: $GIT_USER"
+
+    # Configure GitHub credentials if GITHUB_PAT is provided
+    if [ -n "$GITHUB_PAT" ]; then
+        echo "  ✓ GitHub PAT detected - configuring credentials"
+        # Store credentials for github.com
+        echo "https://${GIT_USER}:${GITHUB_PAT}@github.com" >> ~/.git-credentials
+        echo "    ✓ GitHub credentials configured"
+    else
+        echo "  ○ No GITHUB_PAT provided - GitHub authentication not configured"
+    fi
+
+    # Configure Azure DevOps credentials if AZDO_PAT is provided
+    if [ -n "$AZDO_PAT" ]; then
+        echo "  ✓ Azure DevOps PAT detected - configuring credentials"
+        # Store credentials for dev.azure.com
+        echo "https://${GIT_USER}:${AZDO_PAT}@dev.azure.com" >> ~/.git-credentials
+        echo "    ✓ Azure DevOps credentials configured"
+    else
+        echo "  ○ No AZDO_PAT provided - Azure DevOps authentication not configured"
+    fi
+
+    # Set secure permissions on credentials file if it exists
+    if [ -f ~/.git-credentials ]; then
+        chmod 600 ~/.git-credentials
+        echo "  ℹ Git credentials configured and secured"
+    fi
 fi
 
 echo "=== Git Authentication Setup Complete ==="
