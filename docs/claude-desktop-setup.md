@@ -348,21 +348,66 @@ Server (HeadlessIdeMcp.Server 1.0.0.0) message processing canceled.
    
    You should see a JSON response with `"result":{"tools":[...]}` listing available tools.
 
-3. **Check if the bridge is using the correct protocol**:
+3. **Test the bridge directly** to isolate if it's a protocol compatibility issue:
+   
+   Run the bridge manually and send it an initialize message via stdin:
+   
+   **PowerShell:**
+   ```powershell
+   # Start the bridge in the background
+   $bridge = Start-Process -FilePath "npx" -ArgumentList "-y", "mcp-server-and-gw", "http://localhost:5000/" -NoNewWindow -PassThru -RedirectStandardInput "bridge-input.txt" -RedirectStandardOutput "bridge-output.txt" -RedirectStandardError "bridge-error.txt"
+   
+   # Send an initialize message
+   '{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0.0"}}}' | Out-File -FilePath "bridge-input.txt" -Encoding UTF8
+   
+   # Wait a few seconds
+   Start-Sleep -Seconds 5
+   
+   # Check the output
+   Get-Content "bridge-output.txt"
+   Get-Content "bridge-error.txt"
+   
+   # Kill the bridge
+   Stop-Process -Id $bridge.Id
+   ```
+   
+   **Command Prompt / Bash:**
+   ```bash
+   # Start the bridge and send test message
+   echo '{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0.0"}}}' | npx -y mcp-server-and-gw http://localhost:5000/
+   ```
+   
+   **Expected behavior:**
+   - Bridge should connect to the server
+   - Bridge should send the initialize message
+   - You should see a response from the server
+   - Bridge should wait for more stdin input
+   
+   **If the bridge times out or disconnects**, this confirms a protocol compatibility issue. The problem could be:
+   - The bridge expects a different MCP protocol version than the server provides
+   - The SSE implementation between bridge and server are incompatible
+   - The bridge cannot parse the server's SSE response format
+
+4. **Check if the bridge is using the correct protocol**:
    - The `mcp-server-and-gw` bridge expects an SSE endpoint
    - Verify the server is exposing SSE by checking the response headers include `text/event-stream`
 
-4. **Try testing with the .http file** to verify MCP protocol works:
+5. **Try testing with the .http file** to verify MCP protocol works:
    - Check the `.http/test-mcp-server.http` file in the repository
    - Use VS Code with REST Client extension or similar to test the endpoints
    - Verify `tools/list` and `tools/call` methods work
 
-5. **If the issue persists**, this may indicate a compatibility issue between:
+6. **If the bridge test fails**, this may indicate a compatibility issue between:
    - The MCP server implementation (ModelContextProtocol.AspNetCore)
    - The bridge proxy (mcp-server-and-gw)
    - Claude Desktop's expected protocol version
    
-   Consider checking:
+   **Alternative approaches:**
+   - Try a different bridge/gateway implementation
+   - Check if there's a version mismatch in MCP protocol versions
+   - Consider filing an issue with the `mcp-server-and-gw` project about ASP.NET Core compatibility
+   
+   Check:
    - Docker container logs: `docker-compose logs -f headless-ide-mcp`
    - Whether the server needs to be rebuilt: `docker-compose up --build`
 
