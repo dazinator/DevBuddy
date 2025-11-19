@@ -21,7 +21,7 @@ for %%P in (%PLATFORMS%) do (
     echo.
     echo Publishing for %%P...
     
-    dotnet publish "%PROJECT_DIR%HeadlessIdeMcp.Bridge.csproj" ^
+    dotnet publish "%PROJECT_DIR%DevBuddy.Bridge.csproj" ^
         -c Release ^
         -r %%P ^
         --self-contained ^

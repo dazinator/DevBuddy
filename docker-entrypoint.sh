@@ -11,7 +11,7 @@ CERT_PATH="/https/aspnetapp.pfx"
 HOST_CERT_PATH="/https-host/aspnetapp.pfx"
 CERT_PASSWORD="${ASPNETCORE_Kestrel__Certificates__Default__Password:-DevCertPassword}"
 
-echo "=== Headless IDE MCP - HTTPS Certificate Setup ==="
+echo "=== DevBuddy - HTTPS Certificate Setup ==="
 
 # Check if local dev cert from host is mounted
 if [ -f "$HOST_CERT_PATH" ]; then
@@ -101,4 +101,4 @@ echo "Starting application..."
 echo ""
 
 # Execute the main application
-exec dotnet HeadlessIdeMcp.Server.dll
+exec dotnet DevBuddy.Server.dll
