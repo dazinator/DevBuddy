@@ -1,0 +1,348 @@
+@page "/ui/git-repos"
+@using DevBuddy.Server.Data.Models
+@using DevBuddy.Server.Services
+@inject IGitRepositoryService GitRepoService
+@inject IConfiguration Configuration
+
+<PageTitle>Git Repositories - DevBuddy</PageTitle>
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-git"></i> Git Repositories</h2>
+        <div class="d-flex align-items-center">
+            <div class="form-check form-switch me-3">
+                <input class="form-check-input" type="checkbox" id="autoFetchToggle" 
+                       checked="@autoFetchEnabled" @onchange="ToggleAutoFetch">
+                <label class="form-check-label" for="autoFetchToggle">
+                    Auto Fetch (Every @autoFetchIntervalMinutes minutes)
+                </label>
+            </div>
+            <button class="btn btn-primary" @onclick="ShowAddModal">
+                <i class="bi bi-plus-circle"></i> Add Repository
+            </button>
+        </div>
+    </div>
+
+    @if (repositories == null)
+    {
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (!repositories.Any())
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No repositories configured yet. Click "Add Repository" to get started.
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var repo in repositories)
+            {
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card repo-card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">@repo.Name</h5>
+                            <p class="card-text">
+                                <small class="text-muted">
+                                    <i class="bi bi-link-45deg"></i> @repo.RemoteUrl
+                                </small><br />
+                                <small class="text-muted">
+                                    <i class="bi bi-folder"></i> @repo.LocalPath
+                                </small>
+                            </p>
+                            
+                            <div class="mb-2">
+                                <span class="badge status-badge @GetStatusBadgeClass(repo.CloneStatus)">
+                                    @GetStatusText(repo.CloneStatus)
+                                </span>
+                            </div>
+
+                            @if (repo.CloneStatus == CloneStatus.Cloned)
+                            {
+                                <div class="mb-2">
+                                    <strong>Branch:</strong> @(repo.CurrentBranch ?? "N/A")
+                                </div>
+                                @if (repo.CommitsAhead > 0 || repo.CommitsBehind > 0)
+                                {
+                                    <div class="mb-2">
+                                        <small>
+                                            <i class="bi bi-arrow-up-circle text-success"></i> @repo.CommitsAhead ahead
+                                            <i class="bi bi-arrow-down-circle text-warning"></i> @repo.CommitsBehind behind
+                                        </small>
+                                    </div>
+                                }
+                                @if (repo.HasUncommittedChanges)
+                                {
+                                    <div class="mb-2">
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-exclamation-triangle"></i> Uncommitted changes
+                                        </span>
+                                    </div>
+                                }
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowBranchModal(repo.Id)">
+                                    <i class="bi bi-arrow-left-right"></i> Switch Branch
+                                </button>
+                            }
+
+                            @if (!string.IsNullOrEmpty(repo.ErrorMessage))
+                            {
+                                <div class="alert alert-danger mt-2 mb-0 p-2">
+                                    <small>@repo.ErrorMessage</small>
+                                </div>
+                            }
+
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    Last checked: @(repo.LastChecked?.ToString("g") ?? "Never")
+                                </small>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => RefreshStatus(repo.Id)">
+                                <i class="bi bi-arrow-clockwise"></i> Refresh
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger float-end" @onclick="() => DeleteRepository(repo.Id)">
+                                <i class="bi bi-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@* Add Repository Modal *@
+@if (showAddModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Git Repository</h5>
+                    <button type="button" class="btn-close" @onclick="HideAddModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input type="text" class="form-control" @bind="newRepo.Name" placeholder="my-project" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Remote URL</label>
+                        <input type="text" class="form-control" @bind="newRepo.RemoteUrl" 
+                               placeholder="https://github.com/user/repo.git" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Local Path</label>
+                        <input type="text" class="form-control" @bind="newRepo.LocalPath" 
+                               placeholder="my-project" />
+                        <small class="form-text text-muted">Path within /git-repos where the repo will be cloned</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="HideAddModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="AddRepository">Add Repository</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Branch Switch Modal *@
+@if (showBranchModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Switch Branch</h5>
+                    <button type="button" class="btn-close" @onclick="HideBranchModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (branches == null)
+                    {
+                        <div class="text-center">
+                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Search or create branch</label>
+                            <input type="text" class="form-control" @bind="branchSearchText" 
+                                   @oninput="OnBranchSearchInput" placeholder="Type to search..." />
+                        </div>
+                        <div class="list-group" style="max-height: 300px; overflow-y: auto;">
+                            @if (!string.IsNullOrWhiteSpace(branchSearchText) && !filteredBranches.Any(b => b == branchSearchText))
+                            {
+                                <button class="list-group-item list-group-item-action" 
+                                        @onclick="() => CreateAndCheckoutBranch(branchSearchText)">
+                                    <i class="bi bi-plus-circle text-success"></i> Create new branch: <strong>@branchSearchText</strong>
+                                </button>
+                            }
+                            @foreach (var branch in filteredBranches)
+                            {
+                                <button class="list-group-item list-group-item-action" 
+                                        @onclick="() => CheckoutBranch(branch)">
+                                    @branch
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="HideBranchModal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<GitRepositoryConfiguration>? repositories;
+    private bool showAddModal = false;
+    private bool showBranchModal = false;
+    private int selectedRepoId = 0;
+    private List<string>? branches;
+    private List<string> filteredBranches = new();
+    private string branchSearchText = "";
+    private bool autoFetchEnabled = false;
+    private int autoFetchIntervalMinutes = 5;
+    
+    private GitRepositoryConfiguration newRepo = new()
+    {
+        Name = "",
+        RemoteUrl = "",
+        LocalPath = ""
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        autoFetchEnabled = Configuration.GetValue<bool>("GitRepos:AutoFetchEnabled", false);
+        autoFetchIntervalMinutes = Configuration.GetValue<int>("GitRepos:AutoFetchIntervalMinutes", 5);
+        await LoadRepositories();
+    }
+
+    private async Task LoadRepositories()
+    {
+        repositories = await GitRepoService.GetAllAsync();
+    }
+
+    private void ShowAddModal()
+    {
+        newRepo = new GitRepositoryConfiguration { Name = "", RemoteUrl = "", LocalPath = "" };
+        showAddModal = true;
+    }
+
+    private void HideAddModal()
+    {
+        showAddModal = false;
+    }
+
+    private async Task AddRepository()
+    {
+        if (string.IsNullOrWhiteSpace(newRepo.Name) || 
+            string.IsNullOrWhiteSpace(newRepo.RemoteUrl) || 
+            string.IsNullOrWhiteSpace(newRepo.LocalPath))
+        {
+            return;
+        }
+
+        await GitRepoService.CreateAsync(newRepo);
+        await LoadRepositories();
+        HideAddModal();
+    }
+
+    private async Task DeleteRepository(int id)
+    {
+        await GitRepoService.DeleteAsync(id);
+        await LoadRepositories();
+    }
+
+    private async Task RefreshStatus(int id)
+    {
+        await GitRepoService.CheckRepositoryStatusAsync(id);
+        await LoadRepositories();
+    }
+
+    private async Task ShowBranchModal(int repoId)
+    {
+        selectedRepoId = repoId;
+        showBranchModal = true;
+        branches = null;
+        branchSearchText = "";
+        
+        branches = await GitRepoService.GetBranchesAsync(repoId);
+        filteredBranches = branches;
+    }
+
+    private void HideBranchModal()
+    {
+        showBranchModal = false;
+        selectedRepoId = 0;
+        branches = null;
+    }
+
+    private void OnBranchSearchInput(ChangeEventArgs e)
+    {
+        branchSearchText = e.Value?.ToString() ?? "";
+        if (branches != null)
+        {
+            filteredBranches = branches
+                .Where(b => b.Contains(branchSearchText, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
+
+    private async Task CheckoutBranch(string branchName)
+    {
+        await GitRepoService.CheckoutBranchAsync(selectedRepoId, branchName);
+        await RefreshStatus(selectedRepoId);
+        HideBranchModal();
+    }
+
+    private async Task CreateAndCheckoutBranch(string branchName)
+    {
+        await GitRepoService.CheckoutBranchAsync(selectedRepoId, branchName, createNew: true);
+        await RefreshStatus(selectedRepoId);
+        HideBranchModal();
+    }
+
+    private async Task ToggleAutoFetch(ChangeEventArgs e)
+    {
+        autoFetchEnabled = (bool)(e.Value ?? false);
+        // Note: In a real implementation, this would update the configuration
+        // For now, we're just updating the local state
+        StateHasChanged();
+    }
+
+    private string GetStatusBadgeClass(CloneStatus status)
+    {
+        return status switch
+        {
+            CloneStatus.Cloned => "bg-success",
+            CloneStatus.Cloning => "bg-info",
+            CloneStatus.NotCloned => "bg-secondary",
+            CloneStatus.Failed => "bg-danger",
+            CloneStatus.Conflict => "bg-warning text-dark",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetStatusText(CloneStatus status)
+    {
+        return status switch
+        {
+            CloneStatus.Cloned => "Cloned",
+            CloneStatus.Cloning => "Cloning...",
+            CloneStatus.NotCloned => "Not Cloned",
+            CloneStatus.Failed => "Failed",
+            CloneStatus.Conflict => "Conflict",
+            _ => "Unknown"
+        };
+    }
+}
