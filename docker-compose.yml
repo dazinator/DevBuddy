@@ -28,7 +28,7 @@ services:
       - AZDO_PAT=${AZDO_PAT:-}
     volumes:
       # Mount empty workspace for user projects (no longer mounting sample-codebase)
-      - workspace:/workspace
+      - .:/workspace
       # Volume for persisting SQLite database
       - devbuddy-data:/data
       # Volume for git repositories
