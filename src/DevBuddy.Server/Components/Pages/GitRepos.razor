@@ -9,12 +9,12 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><i class="bi bi-git"></i> Git Repositories</h2>
-        <div>
-            <div class="form-check form-switch d-inline-block me-3">
+        <div class="d-flex align-items-center">
+            <div class="form-check form-switch me-3">
                 <input class="form-check-input" type="checkbox" id="autoFetchToggle" 
                        checked="@autoFetchEnabled" @onchange="ToggleAutoFetch">
                 <label class="form-check-label" for="autoFetchToggle">
-                    Auto Fetch (Cron: @autoFetchCron)
+                    Auto Fetch (Every @autoFetchIntervalMinutes minutes)
                 </label>
             </div>
             <button class="btn btn-primary" @onclick="ShowAddModal">
@@ -211,7 +211,7 @@
     private List<string> filteredBranches = new();
     private string branchSearchText = "";
     private bool autoFetchEnabled = false;
-    private string autoFetchCron = "*/5 * * * *";
+    private int autoFetchIntervalMinutes = 5;
     
     private GitRepositoryConfiguration newRepo = new()
     {
@@ -223,7 +223,7 @@
     protected override async Task OnInitializedAsync()
     {
         autoFetchEnabled = Configuration.GetValue<bool>("GitRepos:AutoFetchEnabled", false);
-        autoFetchCron = Configuration["Stint:Jobs:AutoFetchJob:Triggers:Schedules:0:Schedule"] ?? "*/5 * * * *";
+        autoFetchIntervalMinutes = Configuration.GetValue<int>("GitRepos:AutoFetchIntervalMinutes", 5);
         await LoadRepositories();
     }
 
