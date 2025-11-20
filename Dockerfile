@@ -28,6 +28,12 @@ RUN echo "=== Verifying CLI Tool Installations ===" && \
 # Create workspace directory with correct ownership
 RUN mkdir -p /workspace && chown vscode:vscode /workspace
 
+# Create data directory for SQLite database
+RUN mkdir -p /data && chown vscode:vscode /data
+
+# Create git-repos directory for cloned repositories
+RUN mkdir -p /git-repos && chown vscode:vscode /git-repos
+
 # Set environment variables
 ENV CODE_BASE_PATH=/workspace
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
