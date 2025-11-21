@@ -12,6 +12,8 @@ public interface IDomainService
     Task<Domain> UpdateDomainAsync(Domain domain);
     Task DeleteDomainAsync(int id);
     Task<List<NodeType>> GetNodeTypesForDomainAsync(int domainId);
+    Task<NodeType> CreateNodeTypeAsync(NodeType nodeType);
+    Task DeleteNodeTypeAsync(int id);
     Task SeedDefaultDataAsync();
 }
 
@@ -73,6 +75,23 @@ public class DomainService : IDomainService
         return await _context.NodeTypes
             .Where(nt => nt.DomainId == domainId)
             .ToListAsync();
+    }
+
+    public async Task<NodeType> CreateNodeTypeAsync(NodeType nodeType)
+    {
+        _context.NodeTypes.Add(nodeType);
+        await _context.SaveChangesAsync();
+        return nodeType;
+    }
+
+    public async Task DeleteNodeTypeAsync(int id)
+    {
+        var nodeType = await _context.NodeTypes.FindAsync(id);
+        if (nodeType != null)
+        {
+            _context.NodeTypes.Remove(nodeType);
+            await _context.SaveChangesAsync();
+        }
     }
 
     public async Task SeedDefaultDataAsync()

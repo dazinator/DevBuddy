@@ -261,9 +261,7 @@
     {
         if (newNodeType == null || selectedDomain == null) return;
 
-        var context = await DomainService.GetDomainByIdAsync(selectedDomain.Id);
-        context?.NodeTypes.Add(newNodeType);
-        
+        await DomainService.CreateNodeTypeAsync(newNodeType);
         nodeTypes = await DomainService.GetNodeTypesForDomainAsync(selectedDomain.Id);
         HideNodeTypeModal();
     }
@@ -272,7 +270,7 @@
     {
         if (await JSRuntime.InvokeAsync<bool>("confirm", new object[] { "Are you sure you want to delete this node type?" }))
         {
-            // Implementation needed - add to GraphNodeService
+            await DomainService.DeleteNodeTypeAsync(nodeTypeId);
             if (selectedDomain != null)
             {
                 nodeTypes = await DomainService.GetNodeTypesForDomainAsync(selectedDomain.Id);
