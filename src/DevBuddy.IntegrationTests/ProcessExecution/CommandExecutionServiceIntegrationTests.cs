@@ -253,7 +253,8 @@ public class CommandExecutionServiceIntegrationTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_WithGitReposPath_WorksWhenConfiguredInAllowedPaths()
     {
-        // Arrange - Create a test directory in /tmp to simulate /git-repos
+        // Arrange - Create a test directory in /tmp to simulate a custom allowed path (like /git-repos)
+        // We use a temp directory for the test since /git-repos may not exist in all test environments
         var gitReposTestDir = Path.Combine(Path.GetTempPath(), $"git-repos-test-{Guid.NewGuid()}");
         Directory.CreateDirectory(gitReposTestDir);
         
