@@ -338,4 +338,4 @@ site
 # Environment files with secrets
 .env
 .env.local
-.env.*.local
+.env.*.localgit-repos/
