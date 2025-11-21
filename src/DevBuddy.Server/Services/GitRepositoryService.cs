@@ -396,32 +396,6 @@ public class GitRepositoryService : IGitRepositoryService
         var dirName = Path.GetFileName(fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
         var baseName = string.IsNullOrEmpty(dirName) ? "imported-repo" : dirName;
         
-        // Ensure unique name (handle case where multiple repos have same directory name)
-        // Fetch all existing names that match baseName or baseName-N pattern in a single query to avoid N+1
-        var existingNamesList = await _context.GitRepositories
-            .Where(r => r.Name == baseName || r.Name.StartsWith(baseName + "-"))
-            .Select(r => r.Name)
-            .ToListAsync();
-        
-        // Convert to HashSet for O(1) lookup performance
-        var existingNames = new HashSet<string>(existingNamesList);
-        
-        var repoName = baseName;
-        var counter = 1;
-        const int maxCounter = 1000; // Safety limit to prevent infinite loop
-        
-        while (existingNames.Contains(repoName) && counter < maxCounter)
-        {
-            repoName = $"{baseName}-{counter}";
-            counter++;
-        }
-        
-        if (counter >= maxCounter)
-        {
-            throw new InvalidOperationException(
-                $"Unable to find unique name for repository '{baseName}' - too many similar names exist (>{maxCounter})");
-        }
-        
         // Try to get remote URL
         string? remoteUrl = null;
         try
@@ -440,12 +414,37 @@ public class GitRepositoryService : IGitRepositoryService
         }
         
         // Create the configuration with retry logic to handle race condition on unique name constraint
-        GitRepositoryConfiguration config;
         var maxRetries = 3;
+        const int maxCounter = 1000; // Safety limit to prevent infinite loop
         
         for (var attempt = 1; attempt <= maxRetries; attempt++)
         {
-            config = new GitRepositoryConfiguration
+            // Refresh existing names from database on each attempt to handle race conditions
+            var existingNamesList = await _context.GitRepositories
+                .Where(r => r.Name == baseName || r.Name.StartsWith(baseName + "-"))
+                .Select(r => r.Name)
+                .ToListAsync();
+            
+            // Convert to HashSet for O(1) lookup performance
+            var existingNames = new HashSet<string>(existingNamesList);
+            
+            // Find a unique name
+            var repoName = baseName;
+            var counter = 1;
+            
+            while (existingNames.Contains(repoName) && counter < maxCounter)
+            {
+                repoName = $"{baseName}-{counter}";
+                counter++;
+            }
+            
+            if (counter >= maxCounter)
+            {
+                throw new InvalidOperationException(
+                    $"Unable to find unique name for repository '{baseName}' - too many similar names exist (>{maxCounter})");
+            }
+            
+            var config = new GitRepositoryConfiguration
             {
                 Name = repoName,
                 RemoteUrl = remoteUrl,
@@ -479,19 +478,12 @@ public class GitRepositoryService : IGitRepositoryService
                         $"Last attempted name: {repoName}", ex);
                 }
                 
-                // Regenerate name with higher counter for next attempt
-                repoName = $"{baseName}-{counter}";
-                counter++;
-                
-                _logger.LogWarning(ex, "Name collision detected for {RepoName}, retrying with {NewName} (attempt {Attempt}/{MaxRetries})", 
-                    config.Name, repoName, attempt, maxRetries);
+                _logger.LogWarning(ex, "Name collision detected for {RepoName}, retrying (attempt {Attempt}/{MaxRetries})", 
+                    repoName, attempt, maxRetries);
             }
         }
         
-#pragma warning disable CS0162 // Unreachable code detected
         // Should never reach here - loop always returns on success or throws on final failure
-        // This is required for compiler to recognize all code paths return/throw
         throw new InvalidOperationException("Unexpected end of import loop");
-#pragma warning restore CS0162
     }
 }
