@@ -398,10 +398,13 @@ public class GitRepositoryService : IGitRepositoryService
         
         // Ensure unique name (handle case where multiple repos have same directory name)
         // Fetch all existing names that match baseName or baseName-N pattern in a single query to avoid N+1
-        var existingNames = await _context.GitRepositories
+        var existingNamesList = await _context.GitRepositories
             .Where(r => r.Name == baseName || r.Name.StartsWith(baseName + "-"))
             .Select(r => r.Name)
             .ToListAsync();
+        
+        // Convert to HashSet for O(1) lookup performance
+        var existingNames = new HashSet<string>(existingNamesList);
         
         var repoName = baseName;
         var counter = 1;
@@ -477,7 +480,8 @@ public class GitRepositoryService : IGitRepositoryService
             }
         }
         
-        // This should never be reached due to the throw in the catch block, but required for compilation
-        throw new InvalidOperationException("Unexpected error during repository import");
+        // Should never reach here - loop always returns on success or throws on final failure
+        // This is required for compiler to recognize all code paths return/throw
+        throw new InvalidOperationException("Unexpected end of import loop");
     }
 }
