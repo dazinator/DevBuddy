@@ -67,36 +67,43 @@
                 <div class="list-group">
                     @foreach (var item in items)
                     {
-                        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                            <div class="d-flex align-items-center flex-grow-1">
-                                @if (item.IsDirectory)
-                                {
+                        @if (item.IsDirectory)
+                        {
+                            <div class="list-group-item list-group-item-action">
+                                <div class="d-flex align-items-center">
                                     <i class="@GetIconClass(item) me-2"></i>
-                                    <a href="#" @onclick="() => NavigateToPath(item.RelativePath)" @onclick:preventDefault class="text-decoration-none flex-grow-1">
+                                    <a href="#" @onclick="() => NavigateToPath(item.RelativePath)" @onclick:preventDefault class="text-decoration-none">
                                         @item.Name
                                     </a>
-                                }
-                                else
-                                {
-                                    <i class="@GetIconClass(item) me-2"></i>
-                                    <span class="flex-grow-1">@item.Name</span>
-                                    <span class="badge bg-secondary me-2">@FormatFileSize(item.Size)</span>
-                                    @if (IsViewableFile(item))
-                                    {
-                                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ViewFile(item)">
-                                            <i class="bi bi-eye"></i> View
-                                        </button>
-                                    }
-                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => DownloadFile(item)">
-                                        <i class="bi bi-download"></i> Download
-                                    </button>
-                                }
+                                </div>
                             </div>
-                            @if (!item.IsDirectory)
-                            {
-                                <small class="text-muted ms-2">@item.LastModified.ToString("g")</small>
-                            }
-                        </div>
+                        }
+                        else
+                        {
+                            <div class="list-group-item">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center file-info">
+                                        <i class="@GetIconClass(item) me-2"></i>
+                                        <span class="file-name me-3">@item.Name</span>
+                                        <span class="badge bg-secondary">@FormatFileSize(item.Size)</span>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        @if (IsViewableFile(item))
+                                        {
+                                            <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => ViewFile(item)">
+                                                <i class="bi bi-eye"></i> View
+                                            </button>
+                                        }
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => DownloadFile(item)">
+                                            <i class="bi bi-download"></i> Download
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mt-1">
+                                    <small class="text-muted">@item.LastModified.ToString("g")</small>
+                                </div>
+                            </div>
+                        }
                     }
                 </div>
             </div>
