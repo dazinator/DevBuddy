@@ -408,10 +408,18 @@ public class GitRepositoryService : IGitRepositoryService
         
         var repoName = baseName;
         var counter = 1;
-        while (existingNames.Contains(repoName))
+        const int maxCounter = 1000; // Safety limit to prevent infinite loop
+        
+        while (existingNames.Contains(repoName) && counter < maxCounter)
         {
             repoName = $"{baseName}-{counter}";
             counter++;
+        }
+        
+        if (counter >= maxCounter)
+        {
+            throw new InvalidOperationException(
+                $"Unable to find unique name for repository '{baseName}' - too many similar names exist (>{maxCounter})");
         }
         
         // Try to get remote URL
@@ -480,8 +488,10 @@ public class GitRepositoryService : IGitRepositoryService
             }
         }
         
+#pragma warning disable CS0162 // Unreachable code detected
         // Should never reach here - loop always returns on success or throws on final failure
         // This is required for compiler to recognize all code paths return/throw
         throw new InvalidOperationException("Unexpected end of import loop");
+#pragma warning restore CS0162
     }
 }
