@@ -178,6 +178,7 @@ public class DomainService : IDomainService
         await connection.OpenAsync();
         
         using var cmd = connection.CreateCommand();
+        // No parameters needed for this query - fetching all node types
         cmd.CommandText = "SELECT Id, DomainId, Name, Description FROM NodeTypes ORDER BY DomainId, Name";
         
         using var reader = await cmd.ExecuteReaderAsync();
